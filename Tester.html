@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Pygmy</title>
+<style>
+pre#input
+{
+    color: Green;
+}
+.operator
+{
+    color: Black;
+}
+.identifier
+{
+    color: #277;
+}
+.string
+{
+    color: Red;
+}
+.number
+{
+    color: #54F;
+}
+</style>
+</head>
+<body>
+<pre id="input">
+4 + 6 + 8 + 7
+
+2 ^ 4 ^ 6 ^ 8
+
+a: b: c: d
+
+a.[b].c.d
+
+</pre><br />
+<button id="tokenize">Tokenize</button>
+<button id="lex">Lex</button>
+<button id="compile">Compile</button><br />
+Output:<br />
+<pre id="output">
+</pre>
+</body>
+
+<script src="error.js"></script>
+<script src="tokenizer.js"></script>
+<script src="lexer.js"></script>
+<script src="Compiler.js"></script>
+    <script>
+        var editable = false, tokens;
+        document.getElementById("input").onclick = function () {
+            if (!editable) {
+                this.innerHTML = "<textarea rows='20' cols='100'>" + this.innerText + "</textarea>";
+                editable = true;
+            }
+            else {
+                disableEditing();
+            }
+        };
+        function disableEditing() {
+            if (editable === true) {
+                var self = document.getElementById("input");
+                self.innerHTML = self.innerHTML.split("").slice(31, -11).join("");
+                editable = false;
+            }
+        }
+
+        document.getElementById("tokenize").onclick = function () {
+            disableEditing();
+            var t, text = document.getElementById("input").innerText;
+            try {
+                t = tokenize(text);
+            }
+            catch (e) {
+                t = e;
+            }
+            text = text.split("");
+            for (var i = 0; i < t.length; i++) {
+                var token = t[i];
+                text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];
+                text[token.to - 1] += "</span>";
+            }
+            document.getElementById("input").innerHTML = text.join("");
+            document.getElementById("output").innerHTML = JSON.stringify(t, ["type", "value", "from", "to", "line", "literal", "message"], 4);
+            tokens = t;
+        };
+
+        document.getElementById("lex").onclick = function () {
+            try{
+                lexemes = lexer(tokens);
+                document.getElementById("output").innerHTML = JSON.stringify(lexemes, ["id", "type", "value", "arguments", "arity", "first", "second", "args"], 4);
+            } catch (e) {
+                document.getElementById("output").innerHTML = JSON.stringify(e, ["from", "to", "message"], 4);
+            }
+        };
+
+        document.getElementById("compile").onclick = function () {
+            document.getElementById("output").innerHTML = compiler(lexemes);
+        }
+
+        document.getElementById("input").onclick();
+    </script>
+</html>

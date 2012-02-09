@@ -14,14 +14,21 @@ var lexer = function (tokens, scope) {
         };
     }
     var scoping = {
-        define: function(name, mutable, type) {
-            scope.localScope[name] = mutable ? returnTypes.unknown : type;
+        define: function(name, mutability, type) {
+            scope.localScope[name] = {
+                type: mutability === "immutable" ? returnTypes.unknown : type,
+                mutability: mutability
+            };
         },
         isDefined: function(name) {
             return name in scope.localScope || name in scope.parentScope;
         },
         find: function(name) {
             return scope.localScope[name] || scope.parentScope[name];
+        },
+        scopeType: function(name) {
+            if(name in scope.localScope) return "local";
+            if(name in scope.parentScope) return "parent";
         },
         newScope: function(scope) {
             var newScope = {
@@ -190,6 +197,73 @@ var lexer = function (tokens, scope) {
                 return obj;
             };
             return s;
+        }, assignment = function(id, bp, obj) {
+            var s = symbol(id, bp);
+            s.led = function(left) {
+                var i;
+                var assign = function(name, value) {
+                    var mutability = obj.mutability;
+                    if(name.type !== "identifier" &&
+                     name.id !== "~" &&
+                     name.id !== "." &&
+                     name.type !== "string") {
+                        error(name, "Invalid l-value.");
+                    }
+                    for(i = 0; i < obj.checkLeft.length; i++) {
+                        if(obj.checkLeft[i](name)) error(name, "Invalid l-value for " + id + " assignment operator");
+                    }
+                    var str = name;
+                    if(name.id === "~"){
+                        str = name.value;
+                        mutability = "reference";
+                    }
+                    str = str.value;
+                    for(i = 0; i < obj.checkScope.length; i++) {
+                        if(obj.checkScope[i](str)) error(name, "Scoping rules for " + id + " assignment operator prohibit this assignment."); 
+                    }
+                    scoping.define(str, mutability, getType(value));
+                    return {
+                        id: id,
+                        first: name,
+                        second: value
+                    };
+                };
+                var right = expression(bp);
+                if(left.type === "array") {
+                  if(right.type !== "array" || left.value.length !== right.value.length) {
+                      error([left, right], "Both sides of array assignment must be arrays of equal length.");
+                  } else {
+                    var arr = [];
+                    for(i = 0; i < left.value.length; i++){
+                      arr.push(assign(left.value[i], right.value[i]));
+                    }
+                    return arr;
+                  }
+                } else {
+                    return assign(left, right);
+                }
+            };
+            s.led.bindingPower = bp;
+        };
+        assignment.checks = {
+            isLocal: function(name) {
+                return scoping.scopeType(name) === "local";
+            },
+            isLocalReadonly: function(name) {
+                return assignment.checks.isLocal(name) && scope.find(name).mutability !== "mutable";
+            },
+            isUndefined: function(name) { 
+               return !scoping.isDefined(name);
+            },
+            leftIsReference: function(left) {
+                return left.id === "~";
+            },
+            leftIsProperty: function(left) {
+                return left.id === ".";
+            },
+            isOutsideObjectScope: function() {
+                return !scoping.isObject(scope);
+            }
         };
         
         var checkType = function(token, id, matches, arr){
@@ -226,7 +300,8 @@ var lexer = function (tokens, scope) {
             var right = obj.second;
             if(!(right.type === "identifier" ||
             right.type === "string" ||
-            right.type === "number")) {
+            right.type === "number" ||
+            right.type === "parenthetic")) {
                 error(obj, "Invalid property value");  
             }
             return returnTypes.unknown;
@@ -353,12 +428,34 @@ var lexer = function (tokens, scope) {
         infixr("||", 25).check = check(
             [["boolean", "boolean", "boolean"]]);
         
-        infixr(":", 15);
-        infixr("~:", 15);
-        infixr("!:", 15);
+        (function() {
+        var c = assignment.checks;
+        assignment(":", 15, {
+            checkLeft: [],
+            checkScope: [c.isLocalReadonly],
+            mutability: "mutable"
+        });
+        assignment("~:", 15, {
+            checkLeft: [c.leftIsReference, c.leftIsProperty],
+            checkScope: [c.isLocal, c.isUndefined],
+            mutability: "mutable"
+        });
+        assignment("!:", 15, {
+            checkLeft: [c.leftIsProperty],
+            checkScope: [c.isLocal, c.isOutsideObjectScope],
+            mutability: "mutable"
+        });
         
-        infixr("::", 10);
-        infixr("!::", 10);
+        assignment("::", 10, {
+            checkLeft: [c.leftIsReference],
+            checkScope: [c.isLocal],
+            mutability: "immutable"
+        });
+        assignment("!::", 10, {
+            checkLeft: [c.leftIsReference],
+            checkScope: [c.isLocal, c.isOutsideObjectScope],
+            mutability: "immutable"
+        });
         
         var assigns = [":", "~:"], binaryOps = ["&", "+", "-", "*", "/", "%", "^"];
         for(var i = 0; i < assigns.length; i++){
@@ -370,8 +467,10 @@ var lexer = function (tokens, scope) {
             }
         }
         
-        infix("=>", 5);
+        })();
         
+        infix("=>", 5);
+        var i;
         for(i = 0; i < tokens.length; i++){
             var t = tokens[i];
             if(t.type !== "operator") {

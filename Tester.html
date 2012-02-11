@@ -34,9 +34,9 @@ f:: (){
 
 ;m!: 4
 </pre><br />
-<button id="tokenize">Tokenize</button>
-<button id="parse">Parse</button>
-<button id="compile">Compile</button><br />
+<button id="tokenizer">Tokenize</button>
+<button id="parser">Parse</button>
+<button id="compiler">Compile</button><br />
 Output:<br />
 <pre id="output">
 </pre>
@@ -45,7 +45,7 @@ Output:<br />
 <script src="error.js"></script>
 <script src="tokenizer.js"></script>
 <script src="parser.js"></script>
-<script src="Compiler.js"></script>
+<script src="compiler.js"></script>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 <!--<script src="http://jquery-debounce.googlecode.com/files/jquery.debounce-1.0.5.js"></script>-->
 <script>
@@ -83,26 +83,31 @@ $(function() {
                 $("#input").html(text.join(""));
             }
             return t;
-        };
+    };
     
-    $("#tokenize").click(function() {
+    var getStatements = function(){
+        var tokens = getTokens(), statements;
+        try {
+            statements = parse(tokens);
+        }
+        catch (e) {
+            statements = e;
+        }
+        return statements;
+    };
+    
+    $("#tokenizer").click(function() {
         var t = getTokens();
         $("#output").html(JSON.stringify(t, ["type", "value", "from", "to", "line", "literal", "message"], 4));
     });
     
-    $("#parse").click(function() {
-        var tokens = getTokens();
-        try {
-            statements = parse(tokens);
-            $("#output").html(JSON.stringify(statements, ["id", "type", "value", "arguments", "arity", "first", "second", "args"], 4));
-        }
-        catch (e) {
-            $("#output").html(JSON.stringify(e, ["from", "to", "message"], 4));
-        }
+    $("#parser").click(function() {
+        var statements = getStatements ();
+        $("#output").html(JSON.stringify(statements, ["id", "type", "value", "arguments", "arity", "first", "second", "args", "from", "to", "message"], 4));
     });
     
-    $("#compile").click(function() {
-        $("#output").html(compiler(lexemes));
+    $("#compiler").click(function() {
+        $("#output").html(compile(getStatements(), "javascript"));
     });
 
     getTokens();

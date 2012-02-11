@@ -327,10 +327,10 @@ var parse = function (tokens, scope) {
                 token = tokens[index = match + 1];
                 return obj;
             } else {
-                var inside = tokens.slice(index + 1, close);
+                var inside = tokens.slice(index + 1, close), value;
                 if (!inside.length) value = [];
                 else {
-                    var value = parseExpressions(inside);
+                    value = parseExpressions(inside);
                     if (value.length > 1) error(token, "Only one expression allowed inside parentheses.");
                     value = value[0];
                 }

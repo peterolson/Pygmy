@@ -182,8 +182,8 @@ var parse = function (tokens, scope) {
         }, assignment = function(id, bp, obj) {
             var s = symbol(id, bp);
             s.led = function(left) {
-                var i;
                 var assign = function(name, value) {
+                    var i;
                     var mutability = obj.mutability;
                     if(name.type !== "identifier" &&
                      name.id !== "~" &&
@@ -218,7 +218,7 @@ var parse = function (tokens, scope) {
                   if(right.type !== "array" || left.value.length !== right.value.length) {
                       error([left, right], "Both sides of array assignment must be arrays of equal length.");
                   } else {
-                    var arr = [];
+                    var arr = [], i;
                     for(i = 0; i < left.value.length; i++){
                       arr.push(assign(left.value[i], right.value[i]));
                     }
@@ -584,7 +584,9 @@ var parse = function (tokens, scope) {
     };
 
     var statements = parseExpressions(tokens);
-    for(var i = 0; i < statements.length - 1; i++) {
+    while(statements.length && statements[statements.length - 1].type === "(end)") statements.pop();
+    var i;
+    for(i = 0; i < statements.length - 1; i++) {
         var statement = statements[i];
         if(statement.assignment) continue;
         switch(statements[i].id){

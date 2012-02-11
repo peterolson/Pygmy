@@ -23,11 +23,12 @@ var tokenize = function(input) {
 				};
 			},
 			error = function(message) {
-				throw {
+				throw [{
 					from: from,
 					to: i,
-					message: message
-				};
+					message: message,
+                    type: "error"
+				}];
 			},
 			atEnd = function() {
 				return typeof chr === "undefined";

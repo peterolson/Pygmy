@@ -7,9 +7,10 @@ var error = function (token, message) {
             if (typeof token[i] === "object") traverse(token[i]);
         }
     })(token);
-    throw {
+    throw [{
         from: min,
         to: max,
-        message: message
-    };
+        message: message,
+        type: "error"
+    }];
 };

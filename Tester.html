@@ -1,47 +1,52 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Pygmy</title>
-<style>
-pre#input
-{
-    color: Green;
-}
-.operator
-{
-    color: Black;
-}
-.identifier
-{
-    color: #277;
-}
-.string
-{
-    color: Red;
-}
-.number
-{
-    color: #54F;
-}
-</style>
+    <title>Pygmy</title>
+    <style>
+        pre#input
+        {
+            color: Green;
+        }
+        .operator
+        {
+            color: Black;
+        }
+        .identifier
+        {
+            color: #277;
+        }
+        .string
+        {
+            color: Red;
+        }
+        .number
+        {
+            color: #54F;
+        }
+        .error
+        {
+            border-bottom: 1px solid red;
+            border-bottom-style: dashed;
+        }
+    </style>
 </head>
 <body>
-<pre id="input" contenteditable="true">
+    <pre id="input" contenteditable="true">
 a: b: c: d: 5
 
 f:: (){
 }
 
 ;m!: 4
-</pre><br />
-<button id="tokenizer">Tokenize</button>
-<button id="parser">Parse</button>
-<button id="compiler">Compile</button><br />
-Output:<br />
-<pre id="output">
+</pre>
+    <br />
+    <button id="tokenizer">Tokenize</button>
+    <button id="parser">Parse</button>
+    <button id="compiler">Compile</button><br />
+    Output:<br />
+    <pre id="output">
 </pre>
 </body>
-
 <script src="error.js"></script>
 <script src="tokenizer.js"></script>
 <script src="parser.js"></script>
@@ -49,21 +54,21 @@ Output:<br />
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 <!--<script src="http://jquery-debounce.googlecode.com/files/jquery.debounce-1.0.5.js"></script>-->
 <script>
-$.fn.getPreText = function () {
-    var ce = $("<pre />").html(this.html());
-    if ($.browser.webkit)
-      ce.find("div").replaceWith(function() { return "\n" + this.innerHTML; });
-    if ($.browser.msie)
-      ce.find("p").replaceWith(function() { return this.innerHTML + "<br>"; });
-    if ($.browser.mozilla || $.browser.opera || $.browser.msie)
-      ce.find("br").replaceWith("\n");
+    $.fn.getPreText = function () {
+        var ce = $("<pre />").html(this.html());
+        if ($.browser.webkit)
+            ce.find("div").replaceWith(function () { return "\n" + this.innerHTML; });
+        if ($.browser.msie)
+            ce.find("p").replaceWith(function () { return this.innerHTML + "<br>"; });
+        if ($.browser.mozilla || $.browser.opera || $.browser.msie)
+            ce.find("br").replaceWith("\n");
 
-    return ce.text();
-};
+        return ce.text();
+    };
 
-$(function() {
-    
-    var getTokens = function() {
+    $(function () {
+
+        var getTokens = function () {
             var t, text = $("#input").getPreText(),
                 error;
             try {
@@ -73,44 +78,49 @@ $(function() {
                 t = e;
                 error = true;
             }
-            if (!error) {
-                text = text.split("");
-                for (var i = 0; i < t.length; i++) {
-                    var token = t[i];
+            text = text.split("");
+            for (var i = 0; i < t.length; i++) {
+                var token = t[i];
+                text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];
+                text[token.to - 1] += "</span>";
+            }
+            $("#input").html(text.join(""));
+            return t;
+        };
+
+        var getStatements = function () {
+            var tokens = getTokens(), statements;
+            try {
+                statements = parse(tokens);
+            }
+            catch (e) {
+                statements = e;
+                var text = text = $("#input").getPreText().split("");
+                for (var i = 0; i < e.length; i++) {
+                    var token = e[i];
                     text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];
                     text[token.to - 1] += "</span>";
                 }
                 $("#input").html(text.join(""));
             }
-            return t;
-    };
-    
-    var getStatements = function(){
-        var tokens = getTokens(), statements;
-        try {
-            statements = parse(tokens);
-        }
-        catch (e) {
-            statements = e;
-        }
-        return statements;
-    };
-    
-    $("#tokenizer").click(function() {
-        var t = getTokens();
-        $("#output").html(JSON.stringify(t, ["type", "value", "from", "to", "line", "literal", "message"], 4));
-    });
-    
-    $("#parser").click(function() {
-        var statements = getStatements ();
-        $("#output").html(JSON.stringify(statements, ["id", "type", "value", "arguments", "arity", "first", "second", "args", "from", "to", "message"], 4));
-    });
-    
-    $("#compiler").click(function() {
-        $("#output").html(compile(getStatements(), "javascript"));
-    });
+            return statements;
+        };
 
-    getTokens();
-});
+        $("#tokenizer").click(function () {
+            var t = getTokens();
+            $("#output").html(JSON.stringify(t, ["type", "value", "from", "to", "line", "message"], 4));
+        });
+
+        $("#parser").click(function () {
+            var statements = getStatements();
+            $("#output").html(JSON.stringify(statements, ["id", "type", "value", "arguments", "arity", "first", "second", "args", "from", "to", "message"], 4));
+        });
+
+        $("#compiler").click(function () {
+            $("#output").html(compile(getStatements(), "javascript"));
+        });
+
+        getTokens();
+    });
 </script>
 </html>

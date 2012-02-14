@@ -90,19 +90,19 @@ f:: (){
 
         var getStatements = function () {
             var tokens = getTokens(), statements;
-            try {
+            //try {
                 statements = parse(tokens);
-            }
-            catch (e) {
-                statements = e;
-                var text = text = $("#input").getPreText().split("");
-                for (var i = 0; i < e.length; i++) {
-                    var token = e[i];
-                    text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];
-                    text[token.to - 1] += "</span>";
-                }
-                $("#input").html(text.join(""));
-            }
+//            }
+//            catch (e) {
+//                statements = e;
+//                var text = text = $("#input").getPreText().split("");
+//                for (var i = 0; i < e.length; i++) {
+//                    var token = e[i];
+//                    text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];
+//                    text[token.to - 1] += "</span>";
+//                }
+//                $("#input").html(text.join(""));
+//            }
             return statements;
         };
 

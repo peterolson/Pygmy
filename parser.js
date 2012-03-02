@@ -12,6 +12,13 @@ var parse = function (tokens, scope) {
             parentScope: {},
             type: "global"
         };
+        for (var z in lib) {
+            if (!lib.hasOwnProperty(z)) continue;
+            scope.localScope[z] = {
+                type: "function",
+                mutability: "immutable"
+            };
+        }
     }
     var scoping = {
         define: function (name, mutability, type) {
@@ -42,9 +49,18 @@ var parse = function (tokens, scope) {
             }
             return newScope;
         },
-        newFunction: function (scope) {
+        newFunction: function (scope, args) {
             var newScope = scoping.newScope(scope);
-            newScope.localScope["this"] = "object";
+            newScope.localScope["this"] = {
+                type: "object",
+                mutablility: "immutable"
+            };
+            for (var i = 0; i < args.length; i++) {
+                newScope.localScope[args[i]] = {
+                    type: "unknown",
+                    mutability: "mutable"
+                };
+            }
             newScope.type = "function";
             return newScope;
         },
@@ -106,13 +122,7 @@ var parse = function (tokens, scope) {
 
         var symbol = function (id, bindingPower) {
             return symbols[id] || (symbols[id] = {
-                bindingPower: bindingPower//,
-//                nud: function () {
-//                    error(tokens[index], "Unrecognized or invalid token: " + tokens[index].value);
-//                },
-//                led: function () {
-//                    error(tokens[index], "Unrecognized or invalid token: " + tokens[index].value);
-//                }
+                bindingPower: bindingPower
             });
         };
 
@@ -182,7 +192,7 @@ var parse = function (tokens, scope) {
         }, assignment = function (id, bp, obj, compound) {
             var s = symbol(id, bp);
             s.led = function (left) {
-                var assign = function (name, value) {
+                var checkName = function (name, getLeft) {
                     var i;
                     var mutability = obj.mutability, properties;
                     if (name.id === ".") {
@@ -210,9 +220,15 @@ var parse = function (tokens, scope) {
                         mutability = "reference";
                     }
                     str = str.value;
+                    if (getLeft) return [str, mutability, properties, name];
                     for (i = 0; i < obj.checkScope.length; i++) {
                         if (obj.checkScope[i](str)) error(name, "Scoping rules for " + id + " assignment operator prohibit this assignment.");
                     }
+                    scoping.define(str, mutability, "unknown");
+                };
+                var assign = function (name, value) {
+                    var n = checkName(name, "getLeft");
+                    var str = n[0], mutability = n[1], properties = n[2], name = n[3];
                     var type = getType(value);
                     if (type === "function" && mutability !== "immutable") error([name, value], "functions must be assigned immutably");
                     scoping.define(str, mutability, type);
@@ -228,8 +244,10 @@ var parse = function (tokens, scope) {
                         properties: properties
                     };
                 };
-                var right = expression(bp);
+
                 if (left.type === "array") {
+                    left.value.map(function (v) { v.checkName(left.value[i]); });
+                    var right = expression(bp);
                     if (right.type !== "array" || left.value.length !== right.value.length) {
                         error([left, right], "Both sides of array assignment must be arrays of equal length.");
                     } else {
@@ -240,6 +258,8 @@ var parse = function (tokens, scope) {
                         return arr;
                     }
                 } else {
+                    checkName(left);
+                    var right = expression(bp);
                     return assign(left, right);
                 }
             };
@@ -337,7 +357,7 @@ var parse = function (tokens, scope) {
                 var obj = {
                     type: "function",
                     "arguments": args,
-                    value: parse(tokens.slice(close + 2, match), scoping.newFunction(scope))
+                    value: parse(tokens.slice(close + 2, match), scoping.newFunction(scope, args))
                 };
                 token = tokens[index = match + 1];
                 return obj;
@@ -406,25 +426,25 @@ var parse = function (tokens, scope) {
         prefix("`", 90).check = check(
             ["_", "function"]);
 
-        infixr("^", 85).check = check(
+        infixr("^", 75).check = check(
             [["number", "number", "number"],
             ["array", "function", "array"],
             ["object", "function", "object"]]);
 
-        infix("*", 80).check = check(
+        infix("*", 70).check = check(
             [["number", "number", "number"],
             ["function", "function", "function"],
             ["function", "array", "unkown"]]);
-        infix("/", 80).check = check(
+        infix("/", 70).check = check(
             [["number", "number", "number"]]);
-        infix("%", 80).check = check(
+        infix("%", 70).check = check(
             [["number", "number", "number"]]);
 
-        infix("+", 70).check = check(
+        infix("+", 65).check = check(
             [["number", "number", "number"],
             ["array", "function"],
             ["_", "function"]]);
-        infix("-", 70).check = check(
+        infix("-", 65).check = check(
             [["number", "number", "number"]]);
 
         infix("&", 60).check = check(
@@ -435,19 +455,27 @@ var parse = function (tokens, scope) {
             ["number", "string", "string"],
             ["object", "object", "object"]]);
 
-        suffix("!", 55, function (left) {
+        var checkFunctionValues = function (value, args) {
+            if (!typesMatch(getType(value), "function")) error(value, "Only functions can be called");
+            if (args) args.map(function (a) { getType(a); });
+        };
+
+        suffix("!", 98, function (left) {
+            checkFunctionValues(left);
             return {
                 id: "call",
                 value: left,
                 args: []
             };
         });
-        infix("|", 53, function (left, bp) {
+        infix("|", 95, function (left) {
+            var bp = 53;
             var args = [expression(bp)];
             while (token.value === ",") {
                 advance();
                 args.push(expression(bp));
             }
+            checkFunctionValues(left, args);
             return {
                 id: "call",
                 value: left,
@@ -464,10 +492,11 @@ var parse = function (tokens, scope) {
             }
         };
 
-        infixr("\\", 50, function (left) {
+        infixr("\\", 54, function (left) {
             var args = [left];
-            var value = expression(54);
+            var value = expression(80);
             infixArgs(args);
+            checkFunctionValues(value, args);
             return {
                 id: "call",
                 value: value,
@@ -483,8 +512,9 @@ var parse = function (tokens, scope) {
             }
             if (token.value !== "\\") error(args, "Expected token: \\");
             advance();
-            var value = expression(54);
+            var value = expression(80);
             infixArgs(args);
+            checkFunctionValues(value, args);
             return {
                 id: "call",
                 value: value,
@@ -624,5 +654,9 @@ var parse = function (tokens, scope) {
             default: error(statements[i], "A statement must be an assignment, a function call, or a return statement.");
         }
     }
+    if (statements[i].id === "=>") statements.push({
+        "type": "parenthetic",
+        "value": []
+    });
     return statements;
 };

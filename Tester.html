@@ -32,21 +32,30 @@
 </head>
 <body>
     <pre id="input" contenteditable="true">
-a: b: c: d: 5
-
-f:: (){
+a: {
+  name: 'john'
+  age: 12
+  occupation: 'programmer'
+  getDescription:: (){
+    name & " is a " & age & " year old person who is a " & occupation
+  }
 }
+a.name: 'peter'
+alert| a.name
 
-;m!: 4
+
 </pre>
     <br />
     <button id="tokenizer">Tokenize</button>
     <button id="parser">Parse</button>
     <button id="compiler">Compile</button><br />
+    <button id="runner">Run</button><br />
     Output:<br />
     <pre id="output">
 </pre>
+<iframe id="runframe" style="visibility:hidden;"></iframe>
 </body>
+<script src="lib.js"></script>
 <script src="error.js"></script>
 <script src="tokenizer.js"></script>
 <script src="parser.js"></script>
@@ -64,63 +73,68 @@ f:: (){
             ce.find("br").replaceWith("\n");
 
         return ce.text();
-    };
+       };
+
+       var getTokens = function () {
+       	var t, text = $("#input").getPreText(),
+                error;
+       	try {
+       		t = tokenize(text);
+       	}
+       	catch (e) {
+       		t = e;
+       		error = true;
+       	}
+       	text = text.split("");
+       	for (var i = 0; i < t.length; i++) {
+       		var token = t[i];
+       		text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];
+       		text[token.to - 1] += "</span>";
+       	}
+       	$("#input").html(text.join(""));
+       	return t;
+       };
+
+       var getStatements = function () {
+       	var tokens = getTokens(), statements;
+       	try {
+       		statements = parse(tokens);
+       	}
+       	catch (e) {
+       		statements = e;
+       		var text = text = $("#input").getPreText().split("");
+       		for (var i = 0; i < e.length; i++) {
+       			var token = e[i];
+       			text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];
+       			text[token.to - 1] += "</span>";
+       		}
+       		$("#input").html(text.join(""));
+       	}
+       	return statements;
+       };
 
     $(function () {
 
-        var getTokens = function () {
-            var t, text = $("#input").getPreText(),
-                error;
-            try {
-                t = tokenize(text);
-            }
-            catch (e) {
-                t = e;
-                error = true;
-            }
-            text = text.split("");
-            for (var i = 0; i < t.length; i++) {
-                var token = t[i];
-                text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];
-                text[token.to - 1] += "</span>";
-            }
-            $("#input").html(text.join(""));
-            return t;
-        };
+    	$("#tokenizer").click(function () {
+    		var t = getTokens();
+    		$("#output").html(JSON.stringify(t, ["type", "value", "from", "to", "line", "message"], 4));
+    	});
 
-        var getStatements = function () {
-            var tokens = getTokens(), statements;
-            //try {
-                statements = parse(tokens);
-//            }
-//            catch (e) {
-//                statements = e;
-//                var text = text = $("#input").getPreText().split("");
-//                for (var i = 0; i < e.length; i++) {
-//                    var token = e[i];
-//                    text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];
-//                    text[token.to - 1] += "</span>";
-//                }
-//                $("#input").html(text.join(""));
-//            }
-            return statements;
-        };
+    	$("#parser").click(function () {
+    		var statements = getStatements();
+    		$("#output").html(JSON.stringify(statements, ["id", "type", "value", "arguments", "arity", "first", "second", "args", "from", "to", "message"], 4));
+    	});
 
-        $("#tokenizer").click(function () {
-            var t = getTokens();
-            $("#output").html(JSON.stringify(t, ["type", "value", "from", "to", "line", "message"], 4));
-        });
+    	$("#compiler").click(function () {
+    		$("#output").html(compile(getStatements(), "javascript"));
+    	});
 
-        $("#parser").click(function () {
-            var statements = getStatements();
-            $("#output").html(JSON.stringify(statements, ["id", "type", "value", "arguments", "arity", "first", "second", "args", "from", "to", "message"], 4));
-        });
+    	$("#runner").click(function () {
+    		$("#runframe").attr("src", "");
+    		$("#runframe").attr("src", "Runner.htm");
+    	});
 
-        $("#compiler").click(function () {
-            $("#output").html(compile(getStatements(), "javascript"));
-        });
-
-        getTokens();
+    	getTokens();
     });
 </script>
 </html>

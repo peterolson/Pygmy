@@ -1,7 +1,7 @@
 var lib = (function () {
     var convertFunction = function (fn) {
         return function (args) {
-            return fn.apply(null, args);
+            return fn.apply(null, args.map(function(arg){ return arg.value; }));
         };
     };
 

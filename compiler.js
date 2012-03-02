@@ -19,7 +19,9 @@ var compile = function (expressions, language, scope) {
 		scope.find = function (name) {
 			var v = name in scope.args ? scope.args[name] : name in scope.pArgs ? scope.pArgs[name] : null;
 			if (v) return write.array(v);
-			v = scope.current[name] || scope.parent[name] || write.string(name);
+			v = name in scope.current ? scope.current[name] :
+                name in scope.parent ? scope.parent[name] : 
+                write.string(name);
 			return v;
 		};
 		scope.newScope = function (type, args) {
@@ -137,17 +139,25 @@ var compile = function (expressions, language, scope) {
                 enumerable = node.enumerable << 1;
 				mutability = (mutability === "mutable" ? 0 : mutability === "immutable" ? 1 : 2) << 2;
 				var settings = local | enumerable | mutability;
-				var name = node.first.value;
-				var value = parseNode(node.second);
-				if (node.mutability === "reference") {
-					name = node.first.first.value;
-					value = write["`"](value);
-				}
 				var properties = node.properties || [];
 				for (var i = 0; i < properties.length; i++) {
 					properties[i] = typeof properties[i].value === "string" ? write.string(properties[i].value) : parseNode(properties[i]);
 				}
+                
+                var name = node.first.value;
+				
+				if (node.mutability === "reference") name = node.first.first.value;
+                
+                var value, isFunction = node.second.type === "function";
+                var parseValue = function() {
+                    value = parseNode(node.second);
+			        if(node.mutability === "reference") value = write["`"](value);
+                };
+                
+				if(!isFunction) parseValue();
 				name = scope.assign(name, local);
+                if(isFunction) parseValue();
+                
 				if (node.compound)
 					return write.compoundAssign(name, value, settings, node.compound, properties);
 				return write.assign(name, value, settings, properties);

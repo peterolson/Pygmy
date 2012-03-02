@@ -6,14 +6,17 @@
 			type: "global"
 		}, scopeStack = [scope];
 		var vars = [];
+        var cVar = function(v) {
+            return {
+                value: v,
+                mutability: 1,
+                enumerable: 1
+            };
+        };
 
 		for (var fnc in lib) {
-			scope.current[fnc] = {
-				value: lib[fnc],
-				mutability: 1,
-				enumerable: 1
-			};
-		};
+			scope.current[fnc] = cVar(lib[fnc]);
+		}
 
 		y = function (type, args, values, self) {
 			if (type) {
@@ -28,21 +31,13 @@
 				for (i in scope.current)
 					newScope.parent[i] = scope.current[i];
 				if (type === "f") {
-					newScope.current["this"] = {
-						value: {
-							"arguments": values || [],
-							"function": self
-						},
-						mutability: 1,
-						enumerable: 1
-					};
+					newScope.current["this"] = cVar({
+						"arguments": cVar(values || []),
+						"function": cVar(self)
+					});
 					for (i = 0; i < args.length; i++) {
 						var name = args[i], value = values[i];
-						newScope.current[name] = {
-							value: typeof value !== "undefined" ? value : null,
-							mutability: 1,
-							enumerable: 1
-						};
+						newScope.current[name] = value;
 					}
 				}
 				scope = newScope;
@@ -94,7 +89,13 @@
 		};
 
 		f = function (fn, args) {
-			return fn(args, fn);
+			return fn(args.map(function(value) {
+                return {
+                    value: value,
+                    mutability: 1,
+                    enumerable: 1
+                };
+            }), fn);
 		};
 	})();
 

@@ -654,7 +654,7 @@ var parse = function (tokens, scope) {
             default: error(statements[i], "A statement must be an assignment, a function call, or a return statement.");
         }
     }
-    if (statements[i].id === "=>") statements.push({
+    if (!statements[i] || statements[i].id === "=>") statements.push({
         "type": "parenthetic",
         "value": []
     });

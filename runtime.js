@@ -73,6 +73,7 @@
 			};
 			if (properties) {
 				var obj = n(name);
+                if(obj instanceof Array) value = value.value;
 				if (!(properties instanceof Array)) properties = [properties];
 				for (var i = 0; i < properties.length - 1; i++) {
 					obj = obj ? obj[properties[i]] : null;
@@ -102,6 +103,7 @@
 	(function operators() {
 		var type = function (a) {
 			var t = typeof a;
+            if(a === null || t === "undefined") return "nil";
 			if (a instanceof Array) return "array";
 			return t;
 		}, match = function (args, types) {
@@ -151,8 +153,8 @@
 			m = function (a, b) {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a * b;
-				if (match(args, ["function", "function"])) return function (args) { return a([b(args, b)], a); };
-				if (match(args, ["function", "array"])) return a(b, a);
+				if (match(args, ["function", "function"])) return function (args) { return f(a, f(b, args));; };
+				if (match(args, ["function", "array"])) return f(a, b);
 				typeError("*", args);
 			};
 
@@ -174,14 +176,14 @@
 				if (match(args, ["array", "function"])) {
 					var arr = [];
 					for (var i in a) {
-						arr[i] = b([a[i]], b);
+						arr[i] = f(b, [a[i], i, a]);
 					}
 					return arr;
 				}
 				if (match(args, ["object", "function"])) {
 					var obj = {};
 					for (var i in a) {
-						obj[i] = b([a[i]], b);
+						obj[i] = f(b, [a[i], i, a]);
 					}
 					return obj;
 				}
@@ -239,8 +241,14 @@
 		(function miscellaneous() {
 
 			p = function (a, b) {
-				if (a[b]) return a[b].value;
-				return null;
+				if (a.hasOwnProperty(b)) { 
+                    if(type(a) === "object") return a[b].value;
+                    return a[b];
+				}
+                var prototypeFn = lib[type(a)].value[b];
+                if(prototypeFn){
+                    return prototypeFn([a]);
+                }
 			};
 
 		})();

@@ -14,9 +14,10 @@ var parse = function (tokens, scope) {
         };
         for (var z in lib) {
             if (!lib.hasOwnProperty(z)) continue;
+            var type = typeof lib[z];
             scope.localScope[z] = {
-                type: "function",
-                mutability: "immutable"
+                type: type,
+                mutability: type === "function" ? "immutable" : "mutable"
             };
         }
     }

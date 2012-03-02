@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pygmy</title>
+	<script src="lib.js"></script>
+    <script src="runtime.js"></script>
+</head>
+<body>
+<div id="runningScript">hi</div>
+<script>
+	var code = parent.compile(parent.getStatements(), "javascript");
+	eval(code);
+</script>
+</body>
+</html>

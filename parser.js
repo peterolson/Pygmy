@@ -222,8 +222,10 @@ var parse = function (tokens, scope) {
                     }
                     str = str.value;
                     if (getLeft) return [str, mutability, properties, name];
-                    for (i = 0; i < obj.checkScope.length; i++) {
-                        if (obj.checkScope[i](str)) error(name, "Scoping rules for " + id + " assignment operator prohibit this assignment.");
+                    if(!properties) {
+                        for (i = 0; i < obj.checkScope.length; i++) {
+                            if (obj.checkScope[i](str)) error(name, "Scoping rules for " + id + " assignment operator prohibit this assignment.");
+                        }
                     }
                     scoping.define(str, mutability, "unknown");
                 };
@@ -267,7 +269,7 @@ var parse = function (tokens, scope) {
             s.led.bindingPower = bp;
         };
         assignment.checks = {
-            isLocal: function (name) {
+            isLocal: function (name, left) {
                 return scoping.scopeType(name) === "local";
             },
             isNotLocal: function (name) {

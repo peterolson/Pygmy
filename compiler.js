@@ -1,9 +1,76 @@
 var compile = function (expressions, language, scope) {
 	var counter = -1, fCounter = -1;
 	return (function compile(expressions, language, scope) {
+        
+        var compose = function (name) {
+			return function (first, second) {
+				return write.compose(name, first, second);
+			};
+		};
+
+		var codes = {
+			javascript: {
+				nil: function () { return "undefined"; },
+				compose: function (name, first, second) { return name + "(" + first + (second ? "," + second : "") + ")"; },
+				empty: function () { return ""; },
+				statement: function (stmt) { return stmt + ";"; },
+				identifier: function (name) { return "n(" + name + ")"; },
+				string: function (value) { return '"' + value.replace(/"/g, '\\\"') + '"'; },
+				number: function (number) { return number.toString(); },
+				parenthetic: function (expr) { return "(" + expr + ")"; },
+				argName: function (n) { return "$" + n; },
+				argValue: function (n, index) { return write.argName(n) + "[" + index + "]"; },
+				"function": function (args, body, ret) {
+					return "(function(" + write.argName(fCounter) + ",self){y('f',[" + args.join(",") + "]," + write.argName(fCounter) + ",self);" + body + "var rt=" + ret + "return y(),rt})";
+				},
+				call: function (fn, args) { return "f(" + fn + "," + write.array(args) + ")"; },
+				array: function (arr) { return "[" + arr.join(",") + "]"; },
+				object: function (obj) { return "(function(){y('o');" + obj + "return y();})()"; },
+				assign: function (str, name, value, settings, properties) { return "z(" + str + "," + name + "," + value + "," + settings + (properties.length ? "," + properties.join(",") : "") + ")"; },
+				compoundAssign: function (str, name, value, settings, compound, properties) {
+					var op = write[compound.op], self = write.identifier(name);
+					if (properties.length)
+						for (var i = 0; i < properties.length; i++)
+							self = write["."](self, properties[i]);
+					if (compound.opFirst)
+						return write.assign(str, name, op(self, value), settings, properties);
+					return write.assign(str, name, op(value, self), settings, properties);
+				},
+				"+": compose("a"),
+				"-": compose("s"),
+				"*": compose("m"),
+				"/": compose("d"),
+				"%": compose("r"),
+				"^": compose("e"),
+				"&": compose("c"),
+				".": compose("p"),
+				"=": compose("q"),
+				"!=": compose("nq"),
+				">": compose("g"),
+				"<": compose("l"),
+				">=": compose("ge"),
+				"<=": compose("le"),
+				"!": function (a) { return "!b(" + a + ")"; },
+				"&&": function (a, b) { return "(b(" + a + ")&&b(" + b + "))"; },
+				"||": function (a, b) { return "(b(" + a + ")||b(" + b + "))"; },
+				"^^": function (a, b) { return "(b(" + a + ")?!b(" + b + "):b(" + b + "))"; },
+				"`": function (first) { return "(function(){return " + first + ";})"; },
+				"=>": function (cond, expr) { return "if(" + cond + "){var ret=" + expr + ";return y(),ret}"; }
+			}
+		};
+
+		var write = codes[language];
+        
 		scope = scope || {
 			type: "global",
-			current: {},
+			current: (function(){
+                var obj = {};
+                for (var z in lib) {
+                    if (!lib.hasOwnProperty(z)) continue;
+                    obj[z] = write.string(z);
+                }
+                return obj;
+            })(),
 			parent: {},
 			args: {},
 			pArgs: {}
@@ -47,66 +114,6 @@ var compile = function (expressions, language, scope) {
 			return newScope;
 		};
 		scope.id = fCounter;
-
-		var compose = function (name) {
-			return function (first, second) {
-				return write.compose(name, first, second);
-			};
-		};
-
-		var codes = {
-			javascript: {
-				nil: function () { return "undefined"; },
-				compose: function (name, first, second) { return name + "(" + first + (second ? "," + second : "") + ")"; },
-				empty: function () { return ""; },
-				statement: function (stmt) { return stmt + ";"; },
-				identifier: function (name) { return "n(" + name + ")"; },
-				string: function (value) { return '"' + value.replace(/"/g, '\\\"') + '"'; },
-				number: function (number) { return number.toString(); },
-				parenthetic: function (expr) { return "(" + expr + ")"; },
-				argName: function (n) { return "$" + n; },
-				argValue: function (n, index) { return write.argName(n) + "[" + index + "]"; },
-				"function": function (args, body, ret) {
-					return "(function(" + write.argName(fCounter) + ",self){y('f',[" + args.join(",") + "]," + write.argName(fCounter) + ",self);"
-                        + body + "var rt=" + ret + "return y(),rt})";
-				},
-				call: function (fn, args) { return "f(" + fn + "," + write.array(args) + ")"; },
-				array: function (arr) { return "[" + arr.join(",") + "]"; },
-				object: function (obj) { return "(function(){y('o');" + obj + "return y();})()"; },
-				assign: function (name, value, settings, properties) { return "z(" + name + "," + value + "," + settings + (properties.length ? "," + properties.join(",") : "") + ")" },
-				compoundAssign: function (name, value, settings, compound, properties) {
-					var op = write[compound.op], self = write.identifier(name);
-					if (properties.length)
-						for (var i = 0; i < properties.length; i++)
-							self = write["."](self, properties[i]);
-					if (compound.opFirst)
-						return write.assign(name, op(self, value), settings, properties);
-					return write.assign(name, op(value, self), settings, properties);
-				},
-				"+": compose("a"),
-				"-": compose("s"),
-				"*": compose("m"),
-				"/": compose("d"),
-				"%": compose("r"),
-				"^": compose("e"),
-				"&": compose("c"),
-				".": compose("p"),
-				"=": compose("q"),
-				"!=": compose("nq"),
-				">": compose("g"),
-				"<": compose("l"),
-				">=": compose("ge"),
-				"<=": compose("le"),
-				"!": function (a) { return "!b(" + a + ")"; },
-				"&&": function (a, b) { return "(b(" + a + ")&&b(" + b + "))"; },
-				"||": function (a, b) { return "(b(" + a + ")||b(" + b + "))"; },
-				"^^": function (a, b) { return "(b(" + a + ")?!b(" + b + "):b(" + b + "))"; },
-				"`": function (first) { return "(function(){return " + first + ";})"; },
-				"=>": function (cond, expr) { return "if(" + cond + "){var ret=" + expr + ";return y(),ret}"; }
-			}
-		};
-
-		var write = codes[language];
 
 		var parseNode = function (node) {
 			if (node.type === "identifier")
@@ -155,12 +162,13 @@ var compile = function (expressions, language, scope) {
                 };
                 
 				if(!isFunction) parseValue();
-				name = scope.assign(name, local);
+				var ref = scope.assign(name, local);
                 if(isFunction) parseValue();
+                name = write.string(name);
                 
 				if (node.compound)
-					return write.compoundAssign(name, value, settings, node.compound, properties);
-				return write.assign(name, value, settings, properties);
+					return write.compoundAssign(name, ref, value, settings, node.compound, properties);
+				return write.assign(name, ref, value, settings, properties);
 			}
 			if (node.id === ".")
 				return write["."](parseNode(node.first), node.second.type === "parenthetic" ? parseNode(node.second) : write.string(node.second.value.toString()));

@@ -41,6 +41,7 @@ var lib = (function () {
             },
             reduce: function(arr) {
                 return function(fn) {
+                    if(!arr.length) throw "Cannot reduce empty array.";
                     var start = true, accum;
                     for(var i in arr) {
                         if(!arr.hasOwnProperty(i)) continue;

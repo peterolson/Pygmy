@@ -62,9 +62,9 @@
 			throw "Unrecognized variable: " + name;
 		};
 
-		z = function (name, value, settings, properties) {
+		z = function (str, name, value, settings, properties) {
 			var local = settings & 1,
-                enumerable = settings & 2,
+                enumerable = settings >> 1,
                 mutablility = settings >> 2;
 			value = {
 				value: value,
@@ -81,12 +81,22 @@
 					if (obj.mutability !== 0) throw properties[i] + " cannot be in the property chain of an assignment because it is an immutable property.";
 					obj = obj.value;
 				}
+                var o = obj[properties[properties.length - 1]];
+                if(o.ref) {
+                    value.ref = o.ref;
+                    vars[o.ref] = value;
+                }
 				obj[properties[properties.length - 1]] = value;
 			}
-			else if (typeof name === "number") vars[name] = value;
-			else if (name instanceof Array) name[0][name[1]] = value;
-			else if (local) scope.current[name] = value;
-			else scope.parent[name] = value;
+			else { 
+                if (local) scope.current[str] = value;
+			    else scope.parent[str] = value;
+			    if (typeof name === "number") { 
+                    value.ref = name;
+                    vars[name] = value;
+			    }
+			    else if (name instanceof Array) name[0][name[1]] = value;
+			}
 		};
 
 		f = function (fn, args) {
@@ -113,7 +123,7 @@
 			}
 			return true;
 		}, typeError = function (operator, args) {
-			throw "Operator '" + operator + "' cannot handle arguments of type '" + args.join(" ") + "'";
+			throw "Operator '" + operator + "' cannot handle arguments of type '" + args.map(function(arg){ return type(arg); }).join(" ") + "'";
 		};
 
 		(function concatenation() {

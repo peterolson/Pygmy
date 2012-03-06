@@ -82,7 +82,7 @@
 					obj = obj.value;
 				}
                 var o = obj[properties[properties.length - 1]];
-                if(o.ref) {
+                if(o && o.ref) {
                     value.ref = o.ref;
                     vars[o.ref] = value;
                 }
@@ -255,9 +255,9 @@
                     if(type(a) === "object") return a[b].value;
                     return a[b];
 				}
-                var prototypeFn = lib[type(a)].value[b];
+                var prototypeFn = lib[type(a)][b].value;
                 if(prototypeFn){
-                    return prototypeFn([a]);
+                    return f(prototypeFn, [a]);
                 }
 			};
 

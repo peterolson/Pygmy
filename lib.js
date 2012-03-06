@@ -1,15 +1,12 @@
 var lib = (function () {
     var serialize = function(obj) {
         var convertFunction = function (fn) {
-            return function (args) {
-                return serialize(fn.apply(null, args.map(function(arg){ return arg instanceof Array ? arg : arg.value; })));
+            if(typeof fn === "function") return function (args) {
+                return convertFunction(fn.apply(null, args.map(function(arg){ return arg instanceof Array ? arg : arg.value; })));
             };
+            return fn;
         };
         var convertObject = function(obj) {
-            for(var i in obj){
-                if(!obj.hasOwnProperty(i)) continue;
-                obj[i] = serialize(obj[i]);
-            }
             return {
                 value: obj,
                 mutability: 1,
@@ -17,7 +14,12 @@ var lib = (function () {
             };
         };
         if(typeof obj === "function") return convertFunction(obj);
-        if(typeof obj === "object" && obj !== null && !(obj instanceof Array)) return convertObject(obj);
+        if(typeof obj === "object" && obj !== null && !(obj instanceof Array)) {
+            for(var i in obj){
+                if(!obj.hasOwnProperty(i)) continue;
+                obj[i] = convertObject(convertFunction(obj[i]));
+            }
+        }
         return obj;
     };
 
@@ -38,6 +40,22 @@ var lib = (function () {
             },
             foot: function(arr) {
                 return arr[arr.length - 1];
+            },
+            length: function(arr) {
+                return arr.length;
+            },
+            fill: function(arr) {
+                var ret = [], i;
+                for(i = 1; i < arr.length; i++) {
+                    var from = arr[i - 1], to = arr[i], j;
+                    if(typeof from !== "number" || typeof to !== "number") throw "Can only fill numeric arrays";
+                    if(from < to)
+                        for(j = from; j < to; j++) ret.push(j);
+                    else
+                        for(j = from; j > to; j--) ret.push(j);
+                }
+                ret.push(arr[arr.length - 1]);
+                return ret;
             },
             reduce: function(arr) {
                 return function(fn) {

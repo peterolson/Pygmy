@@ -1,3 +1,41 @@
+if (!String.prototype.quote) {
+    String.prototype.quote = function () {
+		var c, i, l = this.length, o = '"';
+		for (i = 0; i < l; i += 1) {
+			c = this.charAt(i);
+			if (c >= ' ') {
+				if (c === '\\' || c === '"') {
+					o += '\\';
+				}
+				o += c;
+			} else {
+				switch (c) {
+				case '\b':
+					o += '\\b';
+					break;
+				case '\f':
+					o += '\\f';
+					break;
+				case '\n':
+					o += '\\n';
+					break;
+				case '\r':
+					o += '\\r';
+					break;
+				case '\t':
+					o += '\\t';
+					break;
+				default:
+					c = c.charCodeAt();
+					o += '\\u00' + Math.floor(c / 16).toString(16) +
+						(c % 16).toString(16);
+				}
+			}
+		}
+		return o + '"';
+	};
+}
+
 var compile = function (expressions, language, scope) {
 	var counter = -1, fCounter = -1;
 	return (function compile(expressions, language, scope) {
@@ -15,7 +53,7 @@ var compile = function (expressions, language, scope) {
 				empty: function () { return ""; },
 				statement: function (stmt) { return stmt + ";"; },
 				identifier: function (name) { return "n(" + name + ")"; },
-				string: function (value) { return '"' + value.replace(/"/g, '\\\"') + '"'; },
+				string: function (value) { return value.quote(); },
 				number: function (number) { return number.toString(); },
 				parenthetic: function (expr) { return "(" + expr + ")"; },
 				argName: function (n) { return "$" + n; },

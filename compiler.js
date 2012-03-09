@@ -58,8 +58,8 @@ var compile = function (expressions, language, scope) {
 				parenthetic: function (expr) { return "(" + expr + ")"; },
 				argName: function (n) { return "$" + n; },
 				argValue: function (n, index) { return write.argName(n) + "[" + index + "]"; },
-				"function": function (args, body, ret) {
-					return "(function(" + write.argName(fCounter) + ",self){y('f',[" + args.join(",") + "]," + write.argName(fCounter) + ",self);" + body + "var rt=" + ret + "return y(),rt})";
+				"function": function (id, args, body, ret) {
+					return "(function(" + write.argName(id) + ",self){y('f',[" + args.join(",") + "]," + write.argName(id) + ",self);" + body + "var rt=" + ret + "return y(),rt})";
 				},
 				call: function (fn, args) { return "f(" + fn + "," + write.array(args) + ")"; },
 				array: function (arr) { return "[" + arr.join(",") + "]"; },
@@ -93,7 +93,7 @@ var compile = function (expressions, language, scope) {
 				"||": function (a, b) { return "(b(" + a + ")||b(" + b + "))"; },
 				"^^": function (a, b) { return "(b(" + a + ")?!b(" + b + "):b(" + b + "))"; },
 				"`": function (first) { return "(function(){return " + first + ";})"; },
-				"=>": function (cond, expr) { return "if(" + cond + "){var ret=" + expr + ";return y(),ret}"; }
+				"=>": function (cond, expr) { return "if(" + cond + "){var rt=" + expr + ";return y(),rt}"; }
 			}
 		};
 
@@ -163,14 +163,16 @@ var compile = function (expressions, language, scope) {
 			if (node.type === "parenthetic")
 				return write.parenthetic(parseNode(node.value));
 			if (node.type === "function") {
+                var sc = scope.newScope("function", args);
+                var id = fCounter;
 				var args = node["arguments"];
-				var statements = compile(node.value, language, scope.newScope("function", args)), ret = write.nil();
+				var statements = compile(node.value, language, sc), ret = write.nil();
 				if (statements.length) {
 					ret = statements.slice(-1)[0];
 					statements = statements.slice(0, -1);
 				}
 				args = args.map(function (arg) { return write.string(arg); });
-				return write["function"](args, statements.join(""), ret);
+				return write["function"](id, args, statements.join(""), ret);
 			}
 			if (node.id === "call")
 				return write.call(parseNode(node.value), node.args.map(function (x) { return parseNode(x); }));
@@ -209,7 +211,7 @@ var compile = function (expressions, language, scope) {
 				return write.assign(name, ref, value, settings, properties);
 			}
 			if (node.id === ".")
-				return write["."](parseNode(node.first), node.second.type === "parenthetic" ? parseNode(node.second) : write.string(node.second.value.toString()));
+				return write["."](parseNode(node.first), (node.second.type === "parenthetic" || node.second.id === "-") ? parseNode(node.second) : write.string(node.second.value.toString()));
 			if (node.second)
 				return write[node.id](parseNode(node.first), parseNode(node.second));
 			if (node.first)

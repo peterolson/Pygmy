@@ -113,7 +113,7 @@
 	(function operators() {
 		var type = function (a) {
 			var t = typeof a;
-            if(a === null || t === "undefined") return "nil";
+            if(a === null || t === "undefined") return "_nil";
 			if (a instanceof Array) return "array";
 			return t;
 		}, match = function (args, types) {
@@ -203,11 +203,19 @@
 		(function comparison() {
 
 			q = function (a, b) {
+                var args = [a, b];
+                if(match(args, ["array", "array"])) {
+                    if(a.length !== b.length) return false;
+                    for(var i = 0; i < a.length; i++){
+                        if(!q(a[i], b[i])) return false;
+                    }
+                    return true;
+                };
 				return a === b;
 			};
 
 			nq = function (a, b) {
-				return a !== b;
+				return !q(a, b);
 			};
 
 			g = function (a, b) {
@@ -251,10 +259,14 @@
 		(function miscellaneous() {
 
 			p = function (a, b) {
-				if (a.hasOwnProperty(b)) { 
+                if(b < 0 && type(a) === "array") {
+                    b = a.length + b;
+                }
+				if (a && a.hasOwnProperty(b)) { 
                     if(type(a) === "object") return a[b].value;
                     return a[b];
 				}
+                if(!lib[type(a)][b]) throw "Property '" + b + "' does not exist";
                 var prototypeFn = lib[type(a)][b].value;
                 if(prototypeFn){
                     return f(prototypeFn, [a]);

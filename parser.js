@@ -434,10 +434,30 @@ var parse = function (tokens, scope) {
             ["array", "function", "array"],
             ["object", "function", "object"]]);
 
-        infix("*", 70).check = check(
-            [["number", "number", "number"],
-            ["function", "function", "function"],
-            ["function", "array", "unkown"]]);
+        infix("*", 70, function(left) {
+            var right, returnType;
+            if(tokens[index].value === "[") {
+                if (!typesMatch(getType(left), "function")) error(value, "Only functions can be called");
+                right = expression(125);
+                return {
+                    id: "call",
+                    value: left,
+                    args: right.value
+                };
+            }
+            right = expression(71);
+            var tL = getType(left), tR = getType(right);
+            if(typesMatch(tL, "number") && typesMatch(tR, "number")) returnType = "number";
+            else if(typesMatch(tL, "function") && typesMatch(tR, "array")) returnType = "unknown";
+            else if(typesMatch(tL, "function") && typesMatch(tR, "function")) returnType = "function";
+            else error([left, right], "The * operator does not support operands of type '" + tL + " " + tR + "'");
+            return {
+                id: "*",
+                first: left,
+                second: right,
+                returnType: returnType
+            };
+        });
         infix("/", 70).check = check(
             [["number", "number", "number"]]);
         infix("%", 70).check = check(
@@ -649,7 +669,8 @@ var parse = function (tokens, scope) {
     var statements = parseExpressions(tokens);
     while (statements.length && statements[statements.length - 1].type === "(end)") statements.pop();
     var i;
-    for (i = 0; i < statements.length - 1; i++) {
+    for (i = 0; i < statements.length; i++) {
+        if(i === statements.length - 1 && scoping.isFunction(scope)) break;
         var statement = statements[i];
         if (statement.assignment) continue;
         switch (statements[i].id) {
@@ -657,7 +678,7 @@ var parse = function (tokens, scope) {
             default: error(statements[i], "A statement must be an assignment, a function call, or a return statement.");
         }
     }
-    if (!statements[i] || statements[i].id === "=>") statements.push({
+    if ((!statements[i] || statements[i].id === "=>") && scoping.isFunction(scope)) statements.push({
         "type": "parenthetic",
         "value": []
     });

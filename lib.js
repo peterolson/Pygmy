@@ -42,6 +42,7 @@ var lib = (function () {
             return type(a);
         },
         alert: function (msg) {
+            msg = p(msg, "toString");
             alert(msg);
             return msg;
         },
@@ -51,7 +52,32 @@ var lib = (function () {
         error: function(err) {
             throw err;
         },
+        "while": function(cond, fn) {
+          var x;
+          while(f(cond, []) === true) {
+            x = f(fn, []);
+            if(x === "break") break;
+          }
+          return x;
+        },
+        until: function(cond, fn) {
+            var x;
+            while(f(cond, []) === false) {
+            x = f(fn, []);
+            if(x === "break") break;
+          }
+          return x;
+        },
+        "if": function(cond, result) {
+            if(f(cond, []) === true) return f(result, []);
+        },
+        unless: function(cond, result) {
+            if(f(cond, []) === false) return f(result, []);
+        },
         array: {
+            toString: function(arr) {
+                return "[(" + arr.join(") (") + ")]";
+            },
             head: function(arr) {
                 return arr[0];
             },
@@ -64,11 +90,11 @@ var lib = (function () {
             body: function(arr) {
                 return arr.slice(0, -1);
             },
-            random: function(arr) {
-                return arr[(Math.random() * arr.length) | 0];
-            },
             length: function(arr) {
                 return arr.length;
+            },
+            isEmpty: function(arr) {
+                return !arr.length;
             },
             prepend: function(arr) {
                 return function(value, v2) {
@@ -100,29 +126,27 @@ var lib = (function () {
             },
             range: function(arr) {
                 return function(start, end) {
-                    if(!(start in arr) || !(end in arr)) throw "Index not in array";
                     return arr.slice(start, end);
                 };
             },
             remove: function(arr) {
                 return function(start, end) {
                     end = end || start;
-                    if(!(start in arr) || !(end in arr)) throw "Index not in array";
                     end++;
                     return arr.slice(0, start).concat(arr.slice(end));
                 };
             },
             insert: function(arr) {
                 return function(index, elems) {
-                    if(!(index in arr)) throw "Index not in array";
                     if(!(elems instanceof Array)) throw "Expected array argument";
                     return arr.slice(0, index).concat(elems, arr.slice(index));
                 };
             },
             join: function(arr) {
                 return function(separator) {
+                    separator = separator || "";
                     if(typeof separator !== "string") throw "Expected string argument.";
-                    return arr.split(separator);
+                    return arr.join(separator);
                 };
             },
             reverse: function(arr) {
@@ -175,7 +199,7 @@ var lib = (function () {
                     checkFunction(fn);
                     for(var i in arr) { 
                         if(!arr.hasOwnProperty(i)) continue;
-                        f(fn, [arr[i]]);
+                        f(fn, [arr[i], i, arr]);
                     }
                 };
             },
@@ -234,7 +258,7 @@ var lib = (function () {
 					return ret;
                 };
             },
-            fold: function(arr) {
+            reduce: function(arr) {
                 return function(fn, seed) {
                     var accum, i;
                     if(typeof seed === "undefined") {
@@ -250,7 +274,7 @@ var lib = (function () {
                     return accum;
                 };
             },
-            foldBack: function(arr) {
+            reduceBack: function(arr) {
                 return function(fn, seed) {
                 var accum, i;
                     if(typeof seed === "undefined") {
@@ -265,13 +289,83 @@ var lib = (function () {
                     }
                     return accum;
                 };
+            },
+            sum: function(arr) {
+                var sum = 0;
+                for(var i = 0; i < arr.length; i++) {
+                    if(typeof arr[i] === "number") sum += arr[i];
+                    else throw "Expected number";
+                }
+                return sum;
+            },
+            mean: function(arr) {
+                var sum = 0;
+                if(!arr.length) throw "Cannot find mean of empty array";
+                for(var i = 0; i < arr.length; i++) {
+                    if(typeof arr[i] === "number") sum += arr[i];
+                    else throw "Expected number";
+                }
+                return sum / arr.length;
+            },
+            max: function(arr) {
+                var max = Number.MIN_VALUE;
+                for(var i = 0; i < arr.length; i++) {
+                    if(arr[i] > max) max = arr[i];
+                }
+                return max === Number.MIN_VALUE ? undefined : max;
+            },
+            min: function(arr) {
+               var min = Number.MAX_VALUE;
+                for(var i = 0; i < arr.length; i++) {
+                    if(arr[i] < min) min = arr[i];
+                }
+                return min === Number.MAX_VALUE ? undefined : min; 
+            },
+            random: function(arr) {
+                return arr[(Math.random() * arr.length) | 0];
+            },
+            shuffle: function(arr) {
+                var ret = arr.slice(), i = ret.length;
+                if(i === 0) throw "cannot shuffle empty array";
+                while(--i) {
+                    var j = Math.floor(Math.random() * (i + 1)),
+                    ti = ret[i], tj = ret[j];
+                    ret[i] = tj; ret[j] = ti;
+                }
+                return ret;
             }
         },
-        object: {},
-        string: {},
-        number: {},
-        boolean: {},
-        "function": {}
+        object: {
+            toString: function(obj) { return "_object_"; }
+        },
+        string: {
+            toString: function(str){ return str; },
+            split: function(str) {
+                return function(sep, lim) {
+                    sep = sep || "";
+                    if(typeof sep !== "string") throw "Expected string argument";
+                    if(lim && typeof lim !== "number") throw "Expected number argument";
+                    return str.split(sep, lim);
+                };
+            },
+            reverse: function(str) {
+                return str.split("").reverse().join("");
+            }
+        },
+        number: {
+            toString: function(n) { return n + ""; },
+            floor: function(n) { return Math.floor(n); },
+            ceil: function(n) { return Math.ceil(n); }
+        },
+        boolean: {
+            toString: function(bl) { return bl.toString(); }    
+        },
+        "function": {
+            toString: function(fn) { return "_function_"; }
+        },
+        "_nil": {
+            toString: function() { return "nil"; }
+        }
     };
 
     for (var i in library) {

@@ -1,0 +1,12 @@
+Euler 1
+
+    alert| ([1 999].fill.filter| (x){ x % 3 = 0 || x % 5 = 0 }).reduce| (a b){ a + b }
+
+Euler 2
+
+    fibs:: (list) { 
+      list.-1 < 4000000 => fibs| list & (list.-1 + list.-2)
+      list
+    }
+    
+    alert| ((fibs| [1 2]).filter| (x){ x % 2 = 0 }).fold| (a b){ a + b }

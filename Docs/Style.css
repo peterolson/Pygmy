@@ -1,0 +1,44 @@
+  body
+  {
+    background-color: #DDD;
+  }
+  #text
+  {
+    width: 600px;
+    margin: auto;
+    border: 2px solid black;
+    border-radius: 10px;
+    padding: 10px;
+    background-color: #FFF;
+    display: none;
+  }
+	pre, var, code
+	{
+	    color: #4c5;
+	}
+	.operator
+	{
+			color: #646;
+			font-weight: 700;
+	}
+	.identifier
+	{
+			color: #17b;
+	}
+	.string
+	{
+			color: #F00;
+	}
+	.number
+	{
+			color: #00F;
+			font-weight: 500;
+	}
+	
+	blockquote {
+		margin: 0;
+		padding: 0 0.2em;
+		border-left: 3px solid #ccc;
+		background-color: #fff; 
+	}
+ 

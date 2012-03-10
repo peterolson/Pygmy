@@ -94,7 +94,7 @@ var tokenize = function(input) {
 				}
 				tokens.push(make("identifier", str, true));
 			}
-			else if (isNum(chr)) {
+			else if (isNum(chr) || chr === "-") {
 				from = i;
 				var num = chr,
 					hasDigits = false;

@@ -99,8 +99,8 @@ var parse = function (tokens, scope) {
     };
 
     var getType = function (obj) {
-        if (obj.id === "~") error("References can only be used as l-values");
-        if (obj.id === "=>") error("Return statements cannot be used inside of an expression");
+        if (obj.id === "~") error(obj, "References can only be used as l-values");
+        if (obj.id === "=>") error(obj, "Return statements cannot be used inside of an expression");
         if (obj.type === "identifier") {
             var value = scoping.find(obj.value);
             if (!value) error(obj, "'" + obj.value + "': undeclared variable");
@@ -414,6 +414,7 @@ var parse = function (tokens, scope) {
             !(right.type === "parenthetic" && !(typesMatch(getType(right), "string") || typesMatch(getType(right), "number"))))) {
                 error(obj, "Invalid property value");
             }
+            getType(obj.first);
             return returnTypes.unknown;
         });
 

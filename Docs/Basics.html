@@ -1,0 +1,309 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+	<title>Pygmy Basics</title>
+	<link href="Style.css" rel="stylesheet" />
+	</head>
+	<body>
+	<div id="text">
+Basics of Pygmy
+===
+Pygmy is a dynamically and strongly typed multiparadigm language designed to be an [alternative to Javascript](ComparisonToJavascript.html) for client-side as well as server-side scripting. Pygmy has no keywords: all functionality in Pygmy is either baked in via operators or is part of a library.
+
+Displaying Messages
+---
+I will use the native `alert` function in just about every example here. `alert` displays a message box with some text that you tell it to display. We can use it to create the canonical "Hello, world!" program.
+
+    alert| "Hello, world!"
+
+Comments
+---
+Any text on a line after a semicolon (`;`) is ignored by the compiler. Anything between the tokens `;^` and `^;` is treated as a comment.
+
+    alert| "Hello," ;Single line comment
+	;^ This is
+	a multiline comment ^;
+
+	alert| ;^ pointless comment^; "world!"
+
+	;^ Multiline
+	  ;^ comments 
+	    ;^ can
+		  ;^ be
+		    ;^ nested ^;
+		  ^;
+		^;
+	  ^;
+	^;
+
+Strings
+---
+As you saw in the last examples, strings in Pygmy, like most languages, are put between double quotes (`""`). You may also use single quotes (`''`) or bullets (`••`). There are several escape sequences you can use, such as `\n` for newline and `\"` for a literal quote. Strings can be multi-line.
+
+Strings can be concatenated using the `&` operator.
+
+    alert| "Hello"
+	alert| 'world!'
+	alert| •Please•
+	alert| "go " & 'away' & • immediately.•
+	alert| "I already told you,\n\"GO AWAY!!!\""
+	alert| "Once upon a time,
+	there was a person who wouldn't go away.
+	Even after he was told to go away twice,
+	he still wouldn't leave.
+
+	...go away please..."
+
+Numbers
+---
+Numbers are formed with a sequence of digits, and an optional decimal point and sequence of digits after the decimal point and an optional exponent. Numbers can be manipulated with the addition (`+`) operator, the subtraction and negation (`-`) operator, the multiplication (`*`) operator, the division (`/`) operator, the modulo operator (`%`), and the exponentiation operator (`^`). An expression can be put inside of parentheses (`()`) for disambiguation.
+
+Numbers can be concatenated to strings with the `&` operator.
+
+    alert| 42
+	alert| -(-42)
+	alert| 54 - 12
+	alert| ((3 + 2) * ((6 / 2) ^ 2)) - 3
+	alert| 117 % 75
+	alert| 42000e-3
+	alert| "The answer to life,\nthe universe\n and everything\n is:\n" & 42
+
+Comparison
+---
+Numbers and strings can be compared with the equality operator (`=`), the greater-than operator (`>`), the lesser-than operator (`<`), the greater-than-or-equal-to operator (`>=`), and the lesser-than-or-equal-to operator (`<=`). Strings are compared alphabetically, and numbers are compared according to their numerical value.
+
+    alert| 1 = 2
+	alert| 1 + 1 = 2
+	alert| 16 / 4 > 8 / 2
+
+	alert| "apple" < "zebra"
+	alert| "leopard" >= "leotard"
+
+Assignment
+---
+You can declare variables with the `:` operator and you can declare constants with the `::` operator. Once declared, constants are immutable and the compiler will not permit you to reassign them. Variables can be freely reassigned.
+
+Assignments return the right operand and are right-to-left associative. This allows you to chain assignments.
+
+You may assign multiple variables in one statement with bracket notation.
+
+    pi:: 3.14159265358979 ;pi cannot be changed
+	r: 5
+	alert| pi * r ^ 2
+	r: 10
+	alert| pi * r ^ 2
+
+	a: b: c: 5
+	alert| "a: " & a & ", b: " & b & ", c: " & c
+	b: 3
+	a: 1
+	alert| "a: " & a & ", b: " & b & ", c: " & c
+
+	[a b c]: [1 2 3]
+	alert| "a: " & a & ", b: " & b & ", c: " & c
+
+Compound Assignment
+---
+Operators may be combined with assignment operator to form a *compound assignment*. For example, the form `a-: b` is the combination of the arithmetic operator `+` and the assignment operator `:` and is semantically equivalent to `a: a - b`. Similarly, the form `a:- b` is semantically equivalent to `a: b - a`.
+
+Stated more generally, for any operator `o` and any assignment operator `a`, `name oa value` is semantically equivalent to `name a name o value` and `name ao value` is semantically equivalent to `name a value o name`.
+
+Like normal assignment, compound assignments can be chained and can be combined with bracket notation.
+
+    [a b c]: [1 2 3]
+	alert| a & " " & b & " " & c
+
+	a+: 9
+	b+: 7
+	c+: 5
+	alert| a & " " & b & " " & c
+
+	[a b c]*: [a b c]
+	alert| a & " " & b & " " & c
+
+	[a b c]:- [100 100 100]
+	alert| a & " " & b & " " & c
+	
+	alert| (a:& b:& c&: " ")
+	
+Functions
+---
+Functions are first-class objects in Pygmy and as such they can be assigned to variables, passed to other functions or returned from functions. Named functions must declared as constants.
+
+The function returns the last expression that it evaluates. You can return early from a function using the `=>` operator, which makes the function return the right operand if the left operand evaluates to `true`.
+
+    square:: (x) {
+	  x * x
+	}
+
+	alert| square| 16
+	alert| square| square| 3
+
+	areaOfBlock:: (height width depth) {
+	  height * width * depth
+	}
+
+	alert| areaOfBlock| 3, 4, 5
+
+	parity:: (n) {
+	  n % 2 = 0 => "even"
+	  n % 2 = 1 => "odd"
+	  "neither"
+	}
+
+	alert| parity| 3
+	alert| parity| 0
+	alert| parity| 22 / 7
+
+Function Calls
+---
+Pygmy is very flexible about how functions can be called, which allows the programmer to lay out the code in a way that reads most naturally. There are five different ways to call a function in Pygmy. You have already seen the prefix notation used with the `|` operator. You can also call a function with suffix notation, infix notation, void notation, and closed prefix notation.
+
+Void notation is only used when you are not passing any arguments to a function. Closed prefix notation can accept zero or more arguments. The others function call notations can accept one or more arguments.
+
+    alert| "hello" ;prefix notation
+	"hello" \alert ;suffix notation
+
+	times:: (a b) {
+	  alert| a * b
+	}
+
+	times| 3, 4  ;prefix notation
+	3, 4 \times  ;suffix notation
+	3 \times| 4  ;infix notation
+	times*[3 4]  ;closed prefix notation
+
+	sayHello:: (){
+	  alert| "Hello"
+	}
+
+	sayHello!    ;void notation
+	sayHello*[]  ;closed prefix notation
+
+Arrays
+---
+A Pygmy array is simply a list of expressions between two square brackets (`[]`). 
+
+Pygmy arrays are zero-indexed. For example, you can access the first element of an array with `array.0`. You can also access array elements with negative indexes, which count backwards from the end of the array. For example, you can access the penultimate element of an array with `array.-2`. Characters of a string can be accessed the same way.
+
+If the index you need to access is a calculated expression, you must put that expression inside of parentheses (`()`).
+
+    cities: ["Chicago" "Detroit" "Paris" "Beijing" "Amsterdam"]
+
+	alert| cities.2
+	alert| cities.-2
+
+	n: 1
+	alert| cities.(n)
+	alert| cities.(n - 1)
+	alert| cities.(-n)
+
+	cities.4: "New Delhi"
+
+	alert| "I have been to " & cities.(n) & " and " & cities.4
+
+Objects
+---
+A Pygmy object is a collection of key-value pairs. An object is written as a list of assignment statements inside of curly brackets (`{}`).
+
+You can access an object property with `object.key` or `object."key"`. If the key is a calculated expression, you must put the key inside of parentheses (`()`).
+
+    man: {
+	  name: "George"
+	  surname: "Smith"
+	  age: 34
+	  occupation: "hubcap vendor"
+	  description:: (){
+	    name & " " & surname & " is a " & age & " year old " & occupation & "."
+	  }
+	}
+
+	alert| man.name
+	alert| man."name" & " " & man.("sur" & "name")
+	alert| man.description!
+
+	man.name: "John"
+	man.age: 65
+	man.occupation: "usability consultant"
+	alert| man.description!
+
+Scoping Rules
+---
+Variables in Pygmy are accessible from when they are declared until the scope they are inside of ends. If a variable is declared inside of an object, the variable lasts until the end of that object. Similarly, if a variable is declared in a function, it lasts until the end of that function. Variables declared outside of any function or object, that is, in *global scope*, last until the end of the file.
+
+If a variable is declared inside of a certain scope, and there is a variable with the same name in an outer scope, the inner variable shadows the outer variable. Once a variable is shadowed in the inner scope, the inner scope is no longer able to access the outer variable. To reassign a variable in a parent scope, you must explicitly denote that you are doing so by using the parent scope assignment operator (`~:`).
+
+    a:: 3    ;global variable
+	b: {
+	  a: 4   ;local variable shadowing the global a
+	}
+	alert| a
+	alert| b.a
+
+	c: 3
+	d:: () {
+	  c~: 4
+	}
+	alert| c
+	d!
+	alert| c
+
+Referencing variables
+---
+A referencing variable is a variable that references other variables and changes when those variables change. A referencing variable is denoted by the form `~name: value`.
+
+Once declared, referencing variables cannot be reassigned.
+
+    a: 3
+	b: 4
+	~c: a * b
+	alert| c
+	a: 12
+	b: 13
+	alert| c
+
+	man: {
+	  name: "John"
+	  surname: "Sherman"
+	  title: "Mr."
+	  ~fullName: title & " " & name & " " & surname
+
+	  age: 34
+	  occupation: "programmer"
+	  ~description: fullName & " is a " & age & " year old " & occupation & "."
+	}
+
+	alert| man.description
+	man.surname: "Doe"
+	man.title: "Dr."
+	man.age: 22
+	alert| man.description
+
+List Manipulation
+---
+The `&` operator can be used to concatenate arrays or prepend and append elements to an array.
+
+The `^` operator can be used to apply a function to each element of an array.
+
+    a: [2 3 4] & [5 6 7]
+	alert| a
+
+	a:& 1
+	a&: 8
+	alert| a
+
+	a^: (x) { x ^ x }
+	alert| a
+	</div>
+	<iframe id="runframe" style="visibility:hidden;"></iframe>
+	<script src="Markdown.Converter.js"></script>
+	<script src="Markdown.Sanitizer.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+	<script src="../lib.js"></script>
+	<script src="../error.js"></script>
+	<script src="../tokenizer.js"></script>
+	<script src="../parser.js"></script>
+	<script src="../compiler.js"></script>
+	<script src="formatter.js"></script>
+	</body>
+</html>

@@ -142,8 +142,8 @@ var compile = function (expressions, language, scope) {
 			newScope.id = fCounter;
 			if (args) {
 				args.map(function (arg, i) { newScope.args[arg] = [write.argName(fCounter), i]; });
-				for (var arg in scope.args) newScope.pArgs[arg] = scope.args[arg];
 			}
+			for (var arg in scope.args) newScope.pArgs[arg] = scope.args[arg];
 			for (var name in scope.current) {
 				if (!scope.current.hasOwnProperty(name)) continue;
 				if (newScope.pArgs[name]) delete scope.pArgs[name];
@@ -163,9 +163,9 @@ var compile = function (expressions, language, scope) {
 			if (node.type === "parenthetic")
 				return write.parenthetic(parseNode(node.value));
 			if (node.type === "function") {
-                var sc = scope.newScope("function", args);
-                var id = fCounter;
 				var args = node["arguments"];
+				var sc = scope.newScope("function", args);
+                var id = fCounter;
 				var statements = compile(node.value, language, sc), ret = write.nil();
 				if (statements.length) {
 					ret = statements.slice(-1)[0];
@@ -211,7 +211,7 @@ var compile = function (expressions, language, scope) {
 				return write.assign(name, ref, value, settings, properties);
 			}
 			if (node.id === ".")
-				return write["."](parseNode(node.first), (node.second.type === "parenthetic" || node.second.id === "-") ? parseNode(node.second) : write.string(node.second.value.toString()));
+				return write["."](parseNode(node.first), (node.second.type === "parenthetic" || node.second.type === "number") ? parseNode(node.second) : write.string(node.second.value.toString()));
 			if (node.second)
 				return write[node.id](parseNode(node.first), parseNode(node.second));
 			if (node.first)

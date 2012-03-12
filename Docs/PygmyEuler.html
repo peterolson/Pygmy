@@ -45,21 +45,6 @@ Problem 2
        .filter*[(x){ x % 2 = 0 }]
        .sum
 
-Problem 3
----
-
-> The prime factors of 13195 are 5, 7, 13 and 29.
-
-> What is the largest prime factor of the number 317584931803 ?
-
-    num:: 317584931803
-    maxFactor:: (n d) {
-      n <= d => n
-      n % d = 0 => maxFactor| n / d, d
-      maxFactor| n, d + 1
-    }
-    alert| maxFactor| num, 2
-
 Problem 4
 ---
 
@@ -71,15 +56,12 @@ Problem 4
       n.toString = n.toString.reverse
     }
 
-    list: []
+    alert| 
+	  [900 999].fill
+	    .multiply*[[900 999].fill (a b){a * b}]
+		.filter*[(n){ n \isPalindrome }]
+		.max
 
-    [900 999].fill.forEach| (x) {
-      [x 999].fill.forEach| (y) {
-        n: x * y
-        isPalindrome| n => list&~: n
-      }
-    }
-    alert| list.max
 
 Problem 5
 ---
@@ -120,11 +102,18 @@ Problem 6
     squareOfSum:: [1 100].fill.sum \square
 
     alert| squareOfSum - sumOfSquares
+
+
 	</div>
+	<iframe id="runframe" style="visibility:hidden;"></iframe>
 	<script src="Markdown.Converter.js"></script>
 	<script src="Markdown.Sanitizer.js"></script>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+	<script src="../lib.js"></script>
+	<script src="../error.js"></script>
 	<script src="../tokenizer.js"></script>
+	<script src="../parser.js"></script>
+	<script src="../compiler.js"></script>
 	<script src="formatter.js"></script>
 	</body>
 </html>

@@ -6,13 +6,13 @@
 			type: "global"
 		}, scopeStack = [scope];
 		var vars = [];
-        var cVar = function(v) {
-            return {
-                value: v,
-                mutability: 1,
-                enumerable: 1
-            };
-        };
+		var cVar = function (v) {
+			return {
+				value: v,
+				mutability: 1,
+				enumerable: 1
+			};
+		};
 
 		for (var fnc in lib) {
 			scope.current[fnc] = cVar(lib[fnc]);
@@ -45,9 +45,12 @@
 			} else {
 				var obj = scopeStack.pop();
 				scope = scopeStack[scopeStack.length - 1];
+				obj.current.id = oId++;
 				if (obj.type === "o") return obj.current;
 			}
 		};
+
+		var oId = 0, rId;
 
 		n = function (name) {
 			var value;
@@ -73,7 +76,7 @@
 			};
 			if (properties) {
 				var obj = n(name);
-                if(obj instanceof Array) value = value.value;
+				if (obj instanceof Array) value = value.value;
 				if (!(properties instanceof Array)) properties = [properties];
 				for (var i = 0; i < properties.length - 1; i++) {
 					obj = obj ? obj[properties[i]] : null;
@@ -81,39 +84,40 @@
 					if (obj.mutability !== 0) throw properties[i] + " cannot be in the property chain of an assignment because it is an immutable property.";
 					obj = obj.value;
 				}
-                var o = obj[properties[properties.length - 1]];
-                if(o && o.ref) {
-                    value.ref = o.ref;
-                    vars[o.ref] = value;
-                }
+				var o = obj[properties[properties.length - 1]];
+				if (o && typeof o.ref !== "undefined") {
+					value.ref = o.ref;
+					vars[o.ref]/*[obj.id]*/ = value;
+				}
 				obj[properties[properties.length - 1]] = value;
 			}
-			else { 
-                if (local) scope.current[str] = value;
-			    else scope.parent[str] = value;
-			    if (typeof name === "number") { 
-                    value.ref = name;
-                    vars[name] = value;
-			    }
-			    else if (name instanceof Array) name[0][name[1]] = value;
+			else {
+				if (local) scope.current[str] = value;
+				else scope.parent[str] = value;
+				if (typeof name === "number") {
+					value.ref = name;
+					vars[name] = value;
+				}
+				else if (name instanceof Array) name[0][name[1]] = value;
 			}
+			return value.value;
 		};
 
 		f = function (fn, args) {
-			return fn(args.map(function(value) {
-                return {
-                    value: value,
-                    mutability: 1,
-                    enumerable: 1
-                };
-            }), fn);
+			return fn(args.map(function (value) {
+				return {
+					value: value,
+					mutability: 1,
+					enumerable: 1
+				};
+			}), fn);
 		};
 	})();
 
 	(function operators() {
 		var type = function (a) {
 			var t = typeof a;
-            if(a === null || t === "undefined") return "_nil";
+			if (a === null || t === "undefined") return "_nil";
 			if (a instanceof Array) return "array";
 			return t;
 		}, match = function (args, types) {
@@ -123,7 +127,7 @@
 			}
 			return true;
 		}, typeError = function (operator, args) {
-			throw "Operator '" + operator + "' cannot handle arguments of type '" + args.map(function(arg){ return type(arg); }).join(" ") + "'";
+			throw "Operator '" + operator + "' cannot handle arguments of type '" + args.map(function (arg) { return type(arg); }).join(" ") + "'";
 		};
 
 		(function concatenation() {
@@ -163,7 +167,7 @@
 			m = function (a, b) {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a * b;
-				if (match(args, ["function", "function"])) return function (args) { return f(a, f(b, args));; };
+				if (match(args, ["function", "function"])) return function (args) { return f(a, f(b, args)); ; };
 				if (match(args, ["function", "array"])) return f(a, b);
 				typeError("*", args);
 			};
@@ -203,14 +207,14 @@
 		(function comparison() {
 
 			q = function (a, b) {
-                var args = [a, b];
-                if(match(args, ["array", "array"])) {
-                    if(a.length !== b.length) return false;
-                    for(var i = 0; i < a.length; i++){
-                        if(!q(a[i], b[i])) return false;
-                    }
-                    return true;
-                };
+				var args = [a, b];
+				if (match(args, ["array", "array"])) {
+					if (a.length !== b.length) return false;
+					for (var i = 0; i < a.length; i++) {
+						if (!q(a[i], b[i])) return false;
+					}
+					return true;
+				};
 				return a === b;
 			};
 
@@ -259,18 +263,22 @@
 		(function miscellaneous() {
 
 			p = function (a, b) {
-                if(b < 0 && type(a) === "array") {
-                    b = a.length + b;
-                }
-				if (a && a.hasOwnProperty(b)) { 
-                    if(type(a) === "object") return a[b].value;
-                    return a[b];
+				var tA = type(a);
+				if (b < 0 && (tA === "array" || tA === "string")) {
+					b = a.length + b;
 				}
-                if(!lib[type(a)][b]) throw "Property '" + b + "' does not exist";
-                var prototypeFn = lib[type(a)][b].value;
-                if(prototypeFn){
-                    return f(prototypeFn, [a]);
-                }
+				if (a && a.hasOwnProperty(b)) {
+					if (tA === "object") {
+						if (a[b].mutability === 2) return a[b].value();
+						return a[b].value;
+					}
+					return a[b];
+				}
+				if (!lib[type(a)][b]) throw "Property '" + b + "' does not exist";
+				var prototypeFn = lib[tA][b].value;
+				if (prototypeFn) {
+					return f(prototypeFn, [a]);
+				}
 			};
 
 		})();

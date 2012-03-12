@@ -134,7 +134,7 @@ var parse = function (tokens, scope) {
             token = tokens[++index];
         };
 
-        var expression = function (bindingPower) {
+        var expression = function (bindingPower, stop) {
             var left, t = token;
             advance();
             if (typeof t.nud !== "function") error(token, "Unexpected token: " + t.value);
@@ -144,7 +144,7 @@ var parse = function (tokens, scope) {
                 if (token.led && token.led.bindingPower) {
                     token.bindingPower = token.led.bindingPower;
                 }
-                if (bindingPower > token.bindingPower) break;
+                if (bindingPower > token.bindingPower || token.value === stop) break;
                 t = token;
                 if (typeof t.led !== "function") break;
                 advance();
@@ -233,7 +233,7 @@ var parse = function (tokens, scope) {
                     var n = checkName(name, "getLeft");
                     var str = n[0], mutability = n[1], properties = n[2], name = n[3];
                     var type = getType(value);
-                    if (type === "function" && mutability !== "immutable") error([name, value], "functions must be assigned immutably");
+                    if (type === "function" && mutability !== "immutable" && !compound) error([name, value], "functions must be assigned immutably");
                     scoping.define(str, mutability, type);
                     return {
                         id: id,
@@ -249,7 +249,7 @@ var parse = function (tokens, scope) {
                 };
 
                 if (left.type === "array") {
-                    left.value.map(function (v) { v.checkName(left.value[i]); });
+                    left.value.map(function (v) { checkName(v); });
                     var right = expression(bp);
                     if (right.type !== "array" || left.value.length !== right.value.length) {
                         error([left, right], "Both sides of array assignment must be arrays of equal length.");
@@ -493,7 +493,7 @@ var parse = function (tokens, scope) {
             };
         });
         infix("|", 95, function (left) {
-            var bp = 53;
+            var bp = 22;
             var args = [expression(bp)];
             while (token.value === ",") {
                 advance();
@@ -511,14 +511,14 @@ var parse = function (tokens, scope) {
             if (token.value === "|") {
                 do {
                     advance();
-                    args.push(expression(49));
+                    args.push(expression(20));
                 } while (token.value === ",");
             }
         };
 
         infixr("\\", 54, function (left) {
             var args = [left];
-            var value = expression(80);
+            var value = expression(80, "|");
             infixArgs(args);
             checkFunctionValues(value, args);
             return {
@@ -528,15 +528,15 @@ var parse = function (tokens, scope) {
             };
         });
 
-        infix(",", 48, function (left) {
-            var args = [left, expression(52)];
+        infix(",", 21, function (left) {
+            var args = [left, expression(56)];
             while (token.value === ",") {
                 advance();
-                args.push(expression(52));
+                args.push(expression(56));
             }
             if (token.value !== "\\") error(args, "Expected token: \\");
             advance();
-            var value = expression(80);
+            var value = expression(80, "|");
             infixArgs(args);
             checkFunctionValues(value, args);
             return {

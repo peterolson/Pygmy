@@ -1,11 +1,8 @@
 (function () {
 	(function scoping() {
-		var scope = {
-			parent: {},
-			current: {},
-			type: "global"
-		}, scopeStack = [scope];
-		var vars = [];
+		sc = {
+		};
+		scS = [sc];
 		var cVar = function (v) {
 			return {
 				value: v,
@@ -15,49 +12,55 @@
 		};
 
 		for (var fnc in lib) {
-			scope.current[fnc] = cVar(lib[fnc]);
+			sc[fnc] = cVar(lib[fnc]);
 		}
 
-		y = function (type, args, values, self) {
+		var old, recursion = [];
+
+		y = function (type, stack, args, id, values, self) {
 			if (type) {
-				var newScope = {
-					parent: {},
-					current: {},
-					type: type
-				};
-				var i;
-				for (i in scope.parent)
-					newScope.parent[i] = scope.parent[i];
-				for (i in scope.current)
-					newScope.parent[i] = scope.current[i];
-				if (type === "f") {
-					newScope.current["this"] = cVar({
-						"arguments": cVar(values || []),
-						"function": cVar(self)
-					});
-					for (i = 0; i < args.length; i++) {
-						var name = args[i], value = values[i];
-						newScope.current[name] = value;
-					}
+				old = scS.slice();
+				scS = stack;
+				var newScope = {};
+				if (type === 1) {
+					newScope.id = id;
+					newScope.arguments = cVar(values || []);
+					newScope["this"] = cVar(self);
+					for (i = 0; i < args.length; i++) newScope[args[i]] = values[i];
 				}
-				scope = newScope;
-				scopeStack.push(scope);
+				if (id === scS[scS.length - 1].id) {
+					recursion.push(scS[scS.length - 1]);
+					scS[scS.length - 1] = newScope;
+				}
+				else {
+					scS.push(newScope);
+				}
+				return newScope;
 			} else {
-				var obj = scopeStack.pop();
-				scope = scopeStack[scopeStack.length - 1];
-				obj.current.id = oId++;
-				if (obj.type === "o") return obj.current;
+				var obj;
+				if (recursion.length) {
+					obj = scS[scS.length - 1];
+					scS[scS.length - 1] = recursion.pop();
+				}
+				else {
+					obj = scS.pop();
+					scS = old.slice();
+				}
+				return obj;
 			}
 		};
 
-		var oId = 0, rId;
-
-		n = function (name) {
+		n = function (name, scope) {
 			var value;
-			if (typeof name === "number") value = vars[name];
-			if (name instanceof Array) value = name[0][name[1]];
-			else if (name in scope.current) value = scope.current[name];
-			else if (name in scope.parent) value = scope.parent[name];
+			if (scope.hasOwnProperty(name)) value = scope[name];
+			else {
+				for (var i = scS.length - 2; i >= 0; i--) {
+					if (scS[i].hasOwnProperty(name)) {
+						value = scS[i][name];
+						break;
+					}
+				}
+			}
 			if (value) {
 				if (value.mutability === 2) return value.value();
 				return value.value;
@@ -65,7 +68,7 @@
 			throw "Unrecognized variable: " + name;
 		};
 
-		z = function (str, name, value, settings, properties) {
+		z = function (name, scope, value, settings, properties) {
 			var local = settings & 1,
                 enumerable = settings >> 1,
                 mutablility = settings >> 2;
@@ -75,7 +78,7 @@
 				enumerable: enumerable
 			};
 			if (properties) {
-				var obj = n(name);
+				var obj = n(name, scope);
 				if (obj instanceof Array) value = value.value;
 				if (!(properties instanceof Array)) properties = [properties];
 				for (var i = 0; i < properties.length - 1; i++) {
@@ -84,21 +87,18 @@
 					if (obj.mutability !== 0) throw properties[i] + " cannot be in the property chain of an assignment because it is an immutable property.";
 					obj = obj.value;
 				}
-				var o = obj[properties[properties.length - 1]];
-				if (o && typeof o.ref !== "undefined") {
-					value.ref = o.ref;
-					vars[o.ref]/*[obj.id]*/ = value;
-				}
 				obj[properties[properties.length - 1]] = value;
 			}
 			else {
-				if (local) scope.current[str] = value;
-				else scope.parent[str] = value;
-				if (typeof name === "number") {
-					value.ref = name;
-					vars[name] = value;
+				if (local) scope[name] = value;
+				else {
+					for (var i = scS.length - 2; i >= 0; i--) {
+						if (scS[i].hasOwnProperty(name)) {
+							scS[i][name] = value;
+							break;
+						}
+					}
 				}
-				else if (name instanceof Array) name[0][name[1]] = value;
 			}
 			return value.value;
 		};

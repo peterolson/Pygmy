@@ -191,7 +191,7 @@ var parse = function (tokens, scope) {
             };
             return s;
         }, assignment = function (id, bp, obj, compound) {
-            var s = symbol(id, bp);
+            var s = symbol(id, 90);
             s.led = function (left) {
                 var checkName = function (name, getLeft) {
                     var i;
@@ -266,7 +266,7 @@ var parse = function (tokens, scope) {
                     return assign(left, right);
                 }
             };
-            s.led.bindingPower = bp;
+            s.led.bindingPower = 90;
         };
         assignment.checks = {
             isLocal: function (name, left) {
@@ -422,7 +422,7 @@ var parse = function (tokens, scope) {
             ["boolean", "boolean"]);
         prefix("-", 90).check = check(
             ["number", "number"]);
-        prefix("~", 90).check = check(function (obj) {
+        prefix("~", 91).check = check(function (obj) {
             if (obj.first.type !== "identifier") {
                 error(obj, "Only identifiers can be referenced.");
             }

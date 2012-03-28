@@ -24,7 +24,7 @@
 				var newScope = {};
 				if (type === 1) {
 					newScope.id = id;
-					newScope.arguments = cVar(values || []);
+					newScope.arguments = cVar((values || []).map(function (v) { return v.value; }));
 					newScope["this"] = cVar(self);
 					for (i = 0; i < args.length; i++) newScope[args[i]] = values[i];
 				}

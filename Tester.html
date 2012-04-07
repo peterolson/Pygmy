@@ -59,6 +59,12 @@ alert| factorial| x
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 <!--<script src="http://jquery-debounce.googlecode.com/files/jquery.debounce-1.0.5.js"></script>-->
 <script>
+	if (!String.prototype.entityify) {
+		String.prototype.entityify = function () {
+			return this.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+		};
+	}
+
     $.fn.getPreText = function () {
         var ce = $("<pre />").html(this.html());
         if ($.browser.webkit)
@@ -82,6 +88,9 @@ alert| factorial| x
        		error = true;
        	}
        	text = text.split("");
+       	for (var i = 0; i < text.length; i++) {
+       		text[i] = text[i].entityify();
+       	}
        	for (var i = 0; i < t.length; i++) {
        		var token = t[i];
        		text[token.from] = "<span class=\"" + token.type + "\">" + text[token.from];

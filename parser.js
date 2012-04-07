@@ -238,7 +238,7 @@ var parse = function (tokens, scope) {
 					var n = checkName(name, "getLeft");
 					var str = n[0], mutability = n[1], properties = n[2], name = n[3];
 					var type = getType(value);
-					if (type === "function" && mutability !== "immutable" && !compound) error([name, value], "functions must be assigned immutably");
+					if ((value.id === "`" || type === "function") && mutability !== "immutable" && !compound) error([name, value], "functions and thunks must be assigned immutably");
 					scoping.define(str, mutability, type);
 					return {
 						id: id,

@@ -69,7 +69,7 @@ var tokenize = function (input) {
 				return typeof symbolList[chr] !== "undefined";
 			},
 			isWhitespace = function (chr) {
-				return chr.charCodeAt(0) <= " ".charCodeAt(0);
+				return chr.charCodeAt(0) <= " ".charCodeAt(0) || /\s/g.test(chr);
 			},
 			isInitialIdentifier = function (chr) {
 				return isMedialIdentifier(chr) && !isNum(chr);

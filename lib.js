@@ -2,7 +2,7 @@ var lib = (function () {
 	var serialize = function (obj) {
 		var convertFunction = function (fn) {
 			if (typeof fn === "function") return function (args) {
-				var a = args.map(function (arg) { return arg instanceof Array ? arg : arg.value; });
+				var a = args.map(function (arg) { arg = arg instanceof Array ? arg : arg.value; if (!fn.lazy && typeof arg === "function" && arg.thunk) arg = arg(); return arg; });
 				return convertFunction(fn.apply(null, a));
 			};
 			return fn;
@@ -34,10 +34,23 @@ var lib = (function () {
 		return typeof a;
 	};
 
+	var lazy = function (fn) {
+		fn.lazy = true;
+		return fn;
+	};
+
 	var library = {
 		"true": true,
 		"false": false,
 		"nil": null,
+		"?": lazy(function (a, b) {
+			var exists = typeof a !== undefined && a !== null;
+			if (typeof b !== undefined) {
+				//if (typeof b === "function") b = fn(b, []);
+				return exists ? a : b;
+			}
+			return exists;
+		}),
 		type: function (a) {
 			return type(a);
 		},
@@ -52,28 +65,28 @@ var lib = (function () {
 		error: function (err) {
 			throw err;
 		},
-		"while": function (cond, fn) {
+		"while": lazy(function (cond, fn) {
 			var x;
 			while (f(cond, []) === true) {
 				x = f(fn, []);
 				if (x === "break") break;
 			}
 			return x;
-		},
-		until: function (cond, fn) {
+		}),
+		until: lazy(function (cond, fn) {
 			var x;
 			while (f(cond, []) === false) {
 				x = f(fn, []);
 				if (x === "break") break;
 			}
 			return x;
-		},
-		"if": function (cond, result) {
+		}),
+		"if": lazy(function (cond, result) {
 			if (f(cond, []) === true) return f(result, []);
-		},
-		unless: function (cond, result) {
+		}),
+		unless: lazy(function (cond, result) {
 			if (f(cond, []) === false) return f(result, []);
-		},
+		}),
 		array: {
 			toString: function (arr) {
 				return "[(" + arr.join(") (") + ")]";
@@ -362,6 +375,39 @@ var lib = (function () {
 			},
 			reverse: function (str) {
 				return str.split("").reverse().join("");
+			},
+			format: function (str) {
+				return function (obj) {
+					newStr = "";
+					for (var i = 0, j; i < str.length; i++) {
+						j = i;
+						if (str[i] === "#") {
+							j++;
+							var name = "", value = "";
+							if (str[j] === "(") {
+								while (str[++j] !== ")") name += str[j];
+							} else {
+								name = str[j];
+							}
+							if (!obj.hasOwnProperty(name)) {
+								newStr += str[i];
+								continue;
+							}
+							var match = obj[name];
+							j++;
+							if (str[j] === "{") {
+								while (str[++j] !== "}") value += str[j];
+								j++;
+							}
+							if (typeof match === "function") match = f(match, [value]);
+							newStr += p(match, "toString");
+							i = j - 1;
+							continue;
+						}
+						newStr += str[i];
+					}
+					return newStr;
+				};
 			}
 		},
 		number: {

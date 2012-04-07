@@ -22,6 +22,7 @@
 				old = scS.slice();
 				scS = stack;
 				var newScope = {};
+				self.pygmy = true;
 				if (type === 1) {
 					newScope.id = id;
 					newScope.arguments = cVar((values || []).map(function (v) { return v.value; }));
@@ -62,7 +63,6 @@
 				}
 			}
 			if (value) {
-				if (value.mutability === 2) return value.value();
 				return value.value;
 			}
 			throw "Unrecognized variable: " + name;
@@ -274,7 +274,7 @@
 					}
 					return a[b];
 				}
-				if (!lib[type(a)][b]) throw "Property '" + b + "' does not exist";
+				if (!lib[type(a)][b]) return null;
 				var prototypeFn = lib[tA][b].value;
 				if (prototypeFn) {
 					return f(prototypeFn, [a]);
@@ -282,5 +282,17 @@
 			};
 
 		})();
+
+		th = function (fn) {
+			fn.thunk = true;
+			return fn;
+		};
+
+		X = function (x, th) {
+			if (!th && typeof x === "function" && x.thunk) {
+				return x();
+			}
+			return x;
+		};
 	})();
 })()

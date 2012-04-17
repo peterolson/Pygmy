@@ -294,6 +294,35 @@ The `^` operator can be used to apply a function to each element of an array.
 
 	a^: (x) { x ^ x }
 	alert| a
+
+Thunks
+---
+A thunk is a wrapper that forces the expression inside of it at a later time. You can pass thunks to functions to force arguments to be evaluated lazily. Note that an expression in a thunk will be evaluated every time the thunk is referenced.
+
+Thunks are useful when you want to pass arguments to a function where some arguments might not need to be evalutated. For example, if you were to call an `cond` function that accepts a condition and returns the second argument if the condition is true and the third argument if the condition is false, you would not want all three arguments to be evaluated.
+
+A thunk is defined by prefixing an expression with a backquote (<code>`</code>).
+
+    cond:: (cond valueIfTrue valueIfFalse) {
+	  cond => valueIfTrue
+	  valueIfFalse
+	}
+
+	x:: () {
+	  alert| "x is being evaluated"
+	  "x"
+	}
+	y:: () {
+	  alert| "y is being evaluated"
+	  "y"
+	}
+
+	alert| cond| true, x!, y!
+	alert| cond| true, `x!, `y!
+
+	alert| cond| false, x!, `y!
+	alert| cond| false, `x!, `y!
+
 	</div>
 	<iframe id="runframe" style="visibility:hidden;"></iframe>
 	<script src="Markdown.Converter.js"></script>

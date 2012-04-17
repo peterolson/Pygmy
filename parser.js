@@ -594,13 +594,13 @@ var parse = function (tokens, scope) {
 				local: false,
 				enumerable: true
 			});
-			assignment("!:", 15, {
-				checkLeft: [c.leftIsProperty],
-				checkScope: [c.isLocal, c.isOutsideObjectScope],
-				mutability: "mutable",
-				local: true,
-				enumerable: false
-			});
+//			assignment("!:", 15, {
+//				checkLeft: [c.leftIsProperty],
+//				checkScope: [c.isLocal, c.isOutsideObjectScope],
+//				mutability: "mutable",
+//				local: true,
+//				enumerable: false
+//			});
 
 			assignment("::", 10, {
 				checkLeft: [c.leftIsReference],
@@ -609,13 +609,13 @@ var parse = function (tokens, scope) {
 				local: true,
 				enumerable: true
 			});
-			assignment("!::", 10, {
-				checkLeft: [c.leftIsReference, c.leftIsProperty],
-				checkScope: [c.isLocal, c.isOutsideObjectScope],
-				mutability: "immutable",
-				local: true,
-				enumerable: false
-			});
+//			assignment("!::", 10, {
+//				checkLeft: [c.leftIsReference, c.leftIsProperty],
+//				checkScope: [c.isLocal, c.isOutsideObjectScope],
+//				mutability: "immutable",
+//				local: true,
+//				enumerable: false
+//			});
 
 			var compoundChecks = {
 				":": {

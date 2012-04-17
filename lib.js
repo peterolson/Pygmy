@@ -155,6 +155,12 @@ var lib = (function () {
 					return arr.slice(0, index).concat(elems, arr.slice(index));
 				};
 			},
+			replace: function (arr) {
+				return function (index, fn) {
+					var x = arr.slice(0, index).concat([f(fn, [arr[index], index, arr])], arr.slice(index + 1));
+					return x;
+				};
+			},
 			join: function (arr) {
 				return function (separator) {
 					separator = separator || "";

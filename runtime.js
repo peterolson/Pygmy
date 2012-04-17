@@ -22,7 +22,6 @@
 				old = scS.slice();
 				scS = stack;
 				var newScope = {};
-				self.pygmy = true;
 				if (type === 1) {
 					newScope.id = id;
 					newScope.arguments = cVar((values || []).map(function (v) { return v.value; }));

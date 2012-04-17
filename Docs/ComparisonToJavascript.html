@@ -8,7 +8,81 @@
 	<div id="text">
 Pygmy and Javascript
 ===
+Pygmy not only compiles into Javascript, but it is heavily influenced by Javascript. Many of the design decisions in Pygmy were made specifically to improve on Javascript.
 
+Sensible Assignment and Scoping
+---
+There are a couple things about assignment in Javascript that bothered me a little bit
+
+ - There is no way to declare constants
+ - The `var` keyword makes assignments unnecessarily verbose
+ - Assigning a value to a variable in a child function might inadvertently mutate the value of a parent variable.
+
+Pygmy variables are declared using the `:` operator, and constants are declared with the `::` operator.
+
+    x: 1
+	pi:: 3.14159
+
+Variables in a parent function cannot be reassigned in a child function unless you use the parent-scope reassignment operator (`~:`). Unless you use this special operator, variables declared with the same name in a child function will shadow the one in the parent function.
+
+    x: 4
+
+    (){
+	  x: 5 ;Declares local variable
+	}!
+
+	(){
+	  x~: 5 ;Reassigns parent variable
+	}!
+
+Concise function notation
+---
+
+There is no `function` keyword in Pygmy, and you do not put commas in between argument names. Functions are declared as a constant assignment. The last expression evaluated in the function is the return value, so no `return` keyword is necessary. You can conditionally return early with the `=>` operator, which returns the right operand if the left operand evaluates to `true`.
+
+    multiply:: (x y) {
+	  x = 0 => 0
+	  x * y
+	}
+
+Flexible Function Calls
+---
+Pygmy is very flexible about how functions can be called, which allows the programmer to lay out the code in a way that reads most naturally. There are five different ways to call a function in Pygmy.You can call a function with prefix notation, suffix notation, infix notation, void notation, and closed prefix notation.
+
+Void notation is only used when you are not passing any arguments to a function. Closed prefix notation can accept zero or more arguments. The others function call notations can accept one or more arguments.
+
+    alert| "hello" ;prefix notation
+	"hello" \alert ;suffix notation
+
+	times:: (a b) {
+	  alert| a * b
+	}
+
+	times| 3, 4  ;prefix notation
+	3, 4 \times  ;suffix notation
+	3 \times| 4  ;infix notation
+	times*[3 4]  ;closed prefix notation
+
+	sayHello:: (){
+	  alert| "Hello"
+	}
+
+	sayHello!    ;void notation
+	sayHello*[]  ;closed prefix notation
+
+Referenceable properties in object literals
+---
+In Pygmy, unlike Javascript, you can refer to other properties of the same object in an object literal. Also, the comma between each property definition is not used.
+
+    obj: {
+	  firstName: "Peter"
+	  lastName: "Olson"
+	  fullName: firstName & " " & lastName
+	}
+
+Strong typing
+---
+Pygmy will not coerce the types of operands to try to make them work together. Thus, there is only a strict equality operator `=` in Pygmy. There are separate operators for addition (`+`) and string concatenation (`&`).
 	</div>
 	<iframe id="runframe" style="visibility:hidden;"></iframe>
 	<script src="Markdown.Converter.js"></script>

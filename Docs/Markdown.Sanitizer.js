@@ -1,5 +1,6 @@
-(function () {
-    var output, Converter;
+((() => {
+    var output;
+    var Converter;
     if (typeof exports === "object" && typeof require === "function") { // we're in a CommonJS (e.g. Node.js) module
         output = exports;
         Converter = require("./Markdown.Converter").Converter;
@@ -7,8 +8,8 @@
         output = window.Markdown;
         Converter = output.Converter;
     }
-        
-    output.getSanitizingConverter = function () {
+
+    output.getSanitizingConverter = () => {
         var converter = new Converter();
         converter.hooks.chain("postConversion", sanitizeHtml);
         converter.hooks.chain("postConversion", balanceTags);
@@ -43,7 +44,6 @@
     /// adapted from CODESNIPPET: A8591DBA-D1D3-11DE-947C-BA5556D89593
     /// </summary>
     function balanceTags(html) {
-
         if (html == "")
             return "";
 
@@ -57,7 +57,8 @@
         if (tagcount == 0)
             return html;
 
-        var tagname, tag;
+        var tagname;
+        var tag;
         var ignoredtags = "<p><img><br><li><hr>";
         var match;
         var tagpaired = [];
@@ -98,11 +99,11 @@
         // delete all orphaned tags from the string
 
         var ctag = 0;
-        html = html.replace(re, function (match) {
+        html = html.replace(re, match => {
             var res = tagremove[ctag] ? "" : match;
             ctag++;
             return res;
         });
         return html;
     }
-})();
+}))();

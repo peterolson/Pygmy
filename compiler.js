@@ -1,7 +1,10 @@
 if (!String.prototype.quote) {
     String.prototype.quote = function () {
-		var c, i, l = this.length, o = '"';
-		for (i = 0; i < l; i += 1) {
+        var c;
+        var i;
+        var l = this.length;
+        var o = '"';
+        for (i = 0; i < l; i += 1) {
 			c = this.charAt(i);
 			if (c >= ' ') {
 				if (c === '\\' || c === '"') {
@@ -32,47 +35,45 @@ if (!String.prototype.quote) {
 				}
 			}
 		}
-		return o + '"';
-	};
+        return o + '"';
+    };
 }
 
-var compile = function (expressions, language, scope) {
-	var counter = -1, fCounter = -1;
-	return (function compile(expressions, language, scope) {
+var compile = (expressions, language, scope) => {
+    var counter = -1;
+    var fCounter = -1;
+    return (function compile(expressions, language, scope) {
 
-		var compose = function (name) {
-			return function (first, second) {
-				return write.compose(name, first, second);
-			};
-		};
+		var compose = name => (first, second) => write.compose(name, first, second);
 
 		var codes = {
 			javascript: {
-				nil: function () { return "undefined"; },
-				compose: function (name, first, second) { return name + "(" + first + (second ? "," + second : "") + ")"; },
-				empty: function () { return ""; },
-				statement: function (stmt) { return stmt + ";"; },
-				identifier: function (name) { return "n(" + name + ",sc)"; },
-				string: function (value) { return value.quote(); },
-				number: function (number) { return number.toString(); },
-				parenthetic: function (expr) { return "(" + expr + ")"; },
-				argName: function (n) { return "$" + n; },
+				nil() { return "undefined"; },
+				compose(name, first, second) { return name + "(" + first + (second ? "," + second : "") + ")"; },
+				empty() { return ""; },
+				statement(stmt) { return stmt + ";"; },
+				identifier(name) { return "n(" + name + ",sc)"; },
+				string(value) { return value.quote(); },
+				number(number) { return number.toString(); },
+				parenthetic(expr) { return "(" + expr + ")"; },
+				argName(n) { return "$" + n; },
 				"function": function (id, args, body, ret) {
 					return "((function(){var " + write.argName(id) + "=scS.slice();return function(args,self){var sc=y(1," + write.argName(id) + ",[" + args.join(",") + "]," + write.string(write.argName(id)) + ",args,self);" + body + "var rt=" + ret + "return y(),rt}})())";
 				},
-				call: function (fn, args) { return "f(" + fn + "," + write.array(args) + ")"; },
-				array: function (arr) { return "[" + arr.join(",") + "]"; },
-				object: function (obj, id) { return "((function(){var " + write.argName(id) + "=scS.slice();return (function(){var sc=y(2," + write.argName(id) + ");" + obj + "return y();})()})())"; },
-				assign: function (name, value, settings, properties) { return "z(" + name + ",sc," + value + "," + settings + (properties.length ? "," + properties.join(",") : "") + ")"; },
-				compoundAssign: function (name, value, settings, compound, properties) {
-					var op = write[compound.op], self = write.identifier(name);
-					if (properties.length)
+				call(fn, args) { return "f(" + fn + "," + write.array(args) + ")"; },
+				array(arr) { return "[" + arr.join(",") + "]"; },
+				object(obj, id) { return "((function(){var " + write.argName(id) + "=scS.slice();return (function(){var sc=y(2," + write.argName(id) + ");" + obj + "return y();})()})())"; },
+				assign(name, value, settings, properties) { return "z(" + name + ",sc," + value + "," + settings + (properties.length ? "," + properties.join(",") : "") + ")"; },
+				compoundAssign(name, value, settings, compound, properties) {
+                    var op = write[compound.op];
+                    var self = write.identifier(name);
+                    if (properties.length)
 						for (var i = 0; i < properties.length; i++)
 							self = write["."](self, properties[i]);
-					if (compound.opFirst)
+                    if (compound.opFirst)
 						return write.assign(name, op(self, value), settings, properties);
-					return write.assign(name, op(value, self), settings, properties);
-				},
+                    return write.assign(name, op(value, self), settings, properties);
+                },
 				"+": compose("a"),
 				"-": compose("s"),
 				"*": compose("m"),
@@ -98,7 +99,7 @@ var compile = function (expressions, language, scope) {
 
 		var passThunk = false;
 		var expressionWrappers = {
-			javascript: function (x) {
+			javascript(x) {
 				return "X(" + x + (passThunk ? ",true" : "") + ")";
 			}
 		};
@@ -108,19 +109,19 @@ var compile = function (expressions, language, scope) {
 
 		scope = scope || {
 			type: "global",
-			current: (function () {
+			current: ((() => {
 				var obj = {};
 				for (var z in lib) {
 					if (!lib.hasOwnProperty(z)) continue;
 					obj[z] = write.string(z);
 				}
 				return obj;
-			})(),
+			}))(),
 			parent: {},
 			args: {},
 			pArgs: {}
 		};
-		scope.newScope = function (type, args) {
+		scope.newScope = (type, args) => {
 			fCounter++;
 			var newScope = {};
 			for (var i in scope) {
@@ -132,7 +133,7 @@ var compile = function (expressions, language, scope) {
 			newScope.type = type;
 			newScope.id = fCounter;
 			if (args) {
-				args.map(function (arg, i) { newScope.args[arg] = [write.argName(fCounter), i]; });
+				args.map((arg, i) => { newScope.args[arg] = [write.argName(fCounter), i]; });
 			}
 			for (var arg in scope.args) newScope.pArgs[arg] = scope.args[arg];
 			for (var name in scope.current) {
@@ -144,7 +145,7 @@ var compile = function (expressions, language, scope) {
 		};
 		scope.id = fCounter;
 
-		var parseNode = function (node) {
+		var parseNode = node => {
 			var ret;
 			if (node.type === "identifier")
 				ret = write.identifier(write.string(node.value));
@@ -155,54 +156,55 @@ var compile = function (expressions, language, scope) {
 			else if (node.type === "parenthetic")
 				ret = write.parenthetic(parseNode(node.value));
 			else if (node.type === "function") {
-				var args = node["arguments"];
-				var nsc = scope.newScope("function", args);
-				var id = fCounter;
-				var statements = compile(node.value, language, nsc), ret = write.nil();
-				if (statements.length) {
+                var args = node["arguments"];
+                var nsc = scope.newScope("function", args);
+                var id = fCounter;
+                var statements = compile(node.value, language, nsc);
+                var ret = write.nil();
+                if (statements.length) {
 					ret = statements.slice(-1)[0];
 					statements = statements.slice(0, -1);
 				}
-				args = args.map(function (arg) { return write.string(arg); });
-				ret = write["function"](id, args, statements.join(""), ret);
-			}
+                args = args.map(arg => write.string(arg));
+                ret = write["function"](id, args, statements.join(""), ret);
+            }
 			else if (node.id === "call") {
 				passThunk = true;
-				ret = write.call(parseNode(node.value), node.args.map(function (x) { passThunk = true; return parseNode(x); }));
+				ret = write.call(parseNode(node.value), node.args.map(x => { passThunk = true; return parseNode(x); }));
 				passThunk = false;
 			}
 			else if (node.type === "array")
-				ret = write.array(node.value.map(function (x) { return parseNode(x); }));
+				ret = write.array(node.value.map(x => parseNode(x)));
 			else if (node.type === "object") {
 				var nsc = scope.newScope("object");
 				var id = fCounter;
 				ret = write.object(compile(node.value, language, nsc), fCounter);
 			}
 			else if (node.assignment) {
-				var mutability = node.mutability,
-                local = node.local << 0,
-                enumerable = node.enumerable << 1;
-				mutability = (mutability === "mutable" ? 0 : 1) << 2;
-				var settings = local | enumerable | mutability;
-				var properties = node.properties || [];
-				for (var i = 0; i < properties.length; i++) {
+                var mutability = node.mutability;
+                var local = node.local << 0;
+                var enumerable = node.enumerable << 1;
+                mutability = (mutability === "mutable" ? 0 : 1) << 2;
+                var settings = local | enumerable | mutability;
+                var properties = node.properties || [];
+                for (var i = 0; i < properties.length; i++) {
 					properties[i] = typeof properties[i].value === "string" ? write.string(properties[i].value) : parseNode(properties[i]);
 				}
 
-				var name = node.first.value;
+                var name = node.first.value;
 
-				if (node.mutability === "reference") name = node.first.first.value;
+                if (node.mutability === "reference") name = node.first.first.value;
 
-				passThunk = true;
-				var value = parseNode(node.second);
-				if (node.mutability === "reference") value = write["`"](value);
-				name = write.string(name);
+                passThunk = true;
+                var value = parseNode(node.second);
+                if (node.mutability === "reference") value = write["`"](value);
+                name = write.string(name);
 
-				if (node.compound)
+                if (node.compound)
 					ret = write.compoundAssign(name, value, settings, node.compound, properties);
 				else ret = write.assign(name, value, settings, properties);
-				passThunk = false;
-			}
+                passThunk = false;
+            }
 			else if (node.id === ".")
 				ret = write["."](parseNode(node.first), (node.second.type === "parenthetic" || node.second.type === "number") ? parseNode(node.second) : write.string(node.second.value.toString()));
 			else if (node.second) {

@@ -1,12 +1,12 @@
-var concatObjects = function(a, b){
+var concatObjects = (a, b) => {
     for(var i in b){
         if(!b.hasOwnProperty(i)) continue;
         a[i] = b[i];
     }
 };
 
-var parse = function (tokens, scope) {
-	if (!scope) {
+var parse = (tokens, scope) => {
+    if (!scope) {
 		scope = {
 			localScope: {},
 			parentScope: {},
@@ -16,29 +16,29 @@ var parse = function (tokens, scope) {
 			if (!lib.hasOwnProperty(z)) continue;
 			var type = typeof lib[z];
 			scope.localScope[z] = {
-				type: type,
+				type,
 				mutability: type === "function" ? "immutable" : "mutable"
 			};
 		}
 	}
-	var scoping = {
-		define: function (name, mutability, type) {
+    var scoping = {
+		define(name, mutability, type) {
 			scope.localScope[name] = {
 				type: mutability === "immutable" ? type : returnTypes.unknown,
-				mutability: mutability
+				mutability
 			};
 		},
-		isDefined: function (name) {
+		isDefined(name) {
 			return name in scope.localScope || name in scope.parentScope;
 		},
-		find: function (name) {
+		find(name) {
 			return scope.localScope[name] || scope.parentScope[name];
 		},
-		scopeType: function (name) {
+		scopeType(name) {
 			if (name in scope.localScope) return "local";
 			if (name in scope.parentScope) return "parent";
 		},
-		newScope: function (scope) {
+		newScope(scope) {
 			var newScope = {
 				localScope: {},
 				parentScope: {}
@@ -50,7 +50,7 @@ var parse = function (tokens, scope) {
 			}
 			return newScope;
 		},
-		newFunction: function (scope, args) {
+		newFunction(scope, args) {
 			var newScope = scoping.newScope(scope);
 			newScope.localScope["this"] = {
 				type: "function",
@@ -69,29 +69,25 @@ var parse = function (tokens, scope) {
 			newScope.type = "function";
 			return newScope;
 		},
-		newObject: function (scope) {
+		newObject(scope) {
 			var newScope = scoping.newScope(scope);
 			newScope.type = "object";
 			return newScope;
 		},
-		isGlobal: function (scope) {
+		isGlobal(scope) {
 			return scope.type === "global";
 		},
-		isObject: function (scope) {
+		isObject(scope) {
 			return scope.type === "object";
 		},
-		isFunction: function (scope) {
+		isFunction(scope) {
 			return scope.type === "function";
 		}
 	};
 
-	var createFunction = function (value) {
-		return function () {
-			return value;
-		};
-	};
+    var createFunction = value => () => value;
 
-	var returnTypes = {
+    var returnTypes = {
 		string: "string",
 		number: "number",
 		array: "array",
@@ -102,7 +98,7 @@ var parse = function (tokens, scope) {
 		unknown: "unknown"
 	};
 
-	var getType = function (obj) {
+    var getType = obj => {
 		if (obj.id === "~") error(obj, "References can only be used as l-values");
 		if (obj.id === "=>") error(obj, "Return statements cannot be used inside of an expression");
 		if (obj.type === "identifier") {
@@ -115,35 +111,38 @@ var parse = function (tokens, scope) {
 		if (returnTypes[obj.type]) return obj.type;
 		if (obj.returnType) return obj.returnType;
 		return returnTypes.unknown;
-	}, typesMatch = function (type, str) {
+	};
+
+    var typesMatch = (type, str) => {
 		if (str === "_" || type === returnTypes.unknown) return true;
 		return type === str;
 	};
 
 
-	var parseExpressions = function (tokens) {
-		tokens.push({ type: "(end)" });
-		var symbols = {}, index = 0, token = tokens[index];
+    var parseExpressions = tokens => {
+        tokens.push({ type: "(end)" });
+        var symbols = {};
+        var index = 0;
+        var token = tokens[index];
 
-		var symbol = function (id, bindingPower) {
-			return symbols[id] || (symbols[id] = {
-				bindingPower: bindingPower
-			});
-		};
+        var symbol = (id, bindingPower) => symbols[id] || (symbols[id] = {
+            bindingPower
+        });
 
-		var advance = function (expectedToken) {
+        var advance = expectedToken => {
 			if (expectedToken && tokens[index + 1].value !== expectedToken) {
 				error(tokens[index + 1], "Expected token: " + expectedToken);
 			}
 			token = tokens[++index];
 		};
 
-		var expression = function (bindingPower, stop) {
-			var left, t = token;
-			advance();
-			if (typeof t.nud !== "function") error(token, "Unexpected token: " + t.value);
-			left = t.nud();
-			while (true) {
+        var expression = (bindingPower, stop) => {
+            var left;
+            var t = token;
+            advance();
+            if (typeof t.nud !== "function") error(token, "Unexpected token: " + t.value);
+            left = t.nud();
+            while (true) {
 				if (!token || token.type === "(end)") break;
 				if (token.led && token.led.bindingPower) {
 					token.bindingPower = token.led.bindingPower;
@@ -154,50 +153,51 @@ var parse = function (tokens, scope) {
 				advance();
 				left = t.led(left, t.bindingPower);
 			}
-			return left;
-		};
+            return left;
+        };
 
-		var nfx = function (id, bp, bp2, fn) {
+        var nfx = (id, bp, bp2, fn) => {
 			var s = symbol(id, bp);
-			s.led = fn || function (left) {
+			s.led = fn || (left => {
 				var obj = {
-					id: id,
+					id,
 					first: left,
 					second: expression(bp2)
 				};
 				obj.returnType = s.check ? s.check(obj) : returnTypes.unkown;
 				return obj;
-			};
+			});
 			s.led.bindingPower = bp;
 			return s;
-		}, infixr = function (id, bindingPower, fn) {
-			return nfx(id, bindingPower, bindingPower, fn);
-		}, infix = function (id, bindingPower, fn) {
-			return nfx(id, bindingPower, bindingPower + 1, fn);
-		}, suffix = function (id, bindingPower, fn) {
-			return infixr(id, bindingPower, (fn ||
-                function (left) {
-                	return {
-                		id: id,
-                		first: left
-                	};
-                })
-            );
-		}, prefix = function (id, bp, fn) {
+		};
+
+        var infixr = (id, bindingPower, fn) => nfx(id, bindingPower, bindingPower, fn);
+        var infix = (id, bindingPower, fn) => nfx(id, bindingPower, bindingPower + 1, fn);
+
+        var suffix = (id, bindingPower, fn) => infixr(id, bindingPower, (fn ||
+            (left => ({
+                id,
+                first: left
+            })))
+        );
+
+        var prefix = (id, bp, fn) => {
 			var s = symbol(id, 0);
-			s.nud = fn || function () {
+			s.nud = fn || (() => {
 				var obj = {
-					id: id,
+					id,
 					first: expression(bp || 90)
 				};
 				obj.returnType = s.check ? s.check(obj) : returnTypes.unkown;
 				return obj;
-			};
+			});
 			return s;
-		}, assignment = function (id, bp, obj, compound) {
+		};
+
+        var assignment = (id, bp, obj, compound) => {
 			var s = symbol(id, 90);
-			s.led = function (left) {
-				var checkName = function (name, getLeft) {
+			s.led = left => {
+				var checkName = (name, getLeft) => {
 					var i;
 					var mutability = obj.mutability, properties;
 					if (name.id === ".") {
@@ -234,27 +234,27 @@ var parse = function (tokens, scope) {
 					if (properties && scoping.find(str).mutability !== "mutable") error(name, "Cannot mutate the property of an immutable value");
 					scoping.define(str, mutability, "unknown");
 				};
-				var assign = function (name, value) {
+				var assign = (name, value) => {
 					var n = checkName(name, "getLeft");
 					var str = n[0], mutability = n[1], properties = n[2], name = n[3];
 					var type = getType(value);
 					if ((value.id === "`" || type === "function") && mutability !== "immutable" && !compound) error([name, value], "functions and thunks must be assigned immutably");
 					scoping.define(str, mutability, type);
 					return {
-						id: id,
+						id,
 						assignment: true,
 						first: name,
 						second: value,
-						mutability: mutability,
+						mutability,
 						enumberable: obj.enumerable,
 						local: obj.local,
-						compound: compound,
-						properties: properties
+						compound,
+						properties
 					};
 				};
 
 				if (left.type === "array") {
-					left.value.map(function (v) { checkName(v); });
+					left.value.map(v => { checkName(v); });
 					var right = expression(bp);
 					if (right.type !== "array" || left.value.length !== right.value.length) {
 						error([left, right], "Both sides of array assignment must be arrays of equal length.");
@@ -273,34 +273,35 @@ var parse = function (tokens, scope) {
 			};
 			s.led.bindingPower = 90;
 		};
-		assignment.checks = {
-			isLocal: function (name, left) {
+
+        assignment.checks = {
+			isLocal(name, left) {
 				return scoping.scopeType(name) === "local";
 			},
-			isNotLocal: function (name) {
+			isNotLocal(name) {
 				return !assignment.checks.isLocal(name);
 			},
-			isReadonly: function (name) {
+			isReadonly(name) {
 				return scoping.find(name).mutability !== "mutable";
 			},
-			isLocalReadonly: function (name) {
+			isLocalReadonly(name) {
 				return assignment.checks.isLocal(name) && assignment.checks.isReadonly(name);
 			},
-			isUndefined: function (name) {
+			isUndefined(name) {
 				return !scoping.isDefined(name);
 			},
-			leftIsReference: function (left) {
+			leftIsReference(left) {
 				return left.id === "~";
 			},
-			leftIsProperty: function (left) {
+			leftIsProperty(left) {
 				return left.id === ".";
 			},
-			isOutsideObjectScope: function () {
+			isOutsideObjectScope() {
 				return !scoping.isObject(scope);
 			}
 		};
 
-		var checkType = function (token, id, matches, arr) {
+        var checkType = (token, id, matches, arr) => {
 			var allUnknown = true;
 			for (var i = 0; i < matches.length; i++) {
 				matches[i] = getType(matches[i]);
@@ -318,11 +319,11 @@ var parse = function (tokens, scope) {
 				if (allMatch) return arr[i][arr[i].length - 1];
 			}
 			error(token, "The " + id + " operator does not support operands of type '" + matches.join(" ") + "'");
-		}, check = function (arr) {
-			if (typeof arr === "function") return function (obj) {
-				return arr(obj);
-			};
-			return function (obj) {
+		};
+
+        var check = arr => {
+			if (typeof arr === "function") return obj => arr(obj);
+			return obj => {
 				var matches = [obj.first];
 				if (obj.second) matches.push(obj.second);
 				var id = obj.id;
@@ -330,7 +331,7 @@ var parse = function (tokens, scope) {
 			};
 		};
 
-		var findMatchingDelimiter = function (token, match, index) {
+        var findMatchingDelimiter = (token, match, index) => {
 			var balance = 1;
 			var start = index;
 
@@ -348,45 +349,46 @@ var parse = function (tokens, scope) {
 			}
 			return index;
 		};
-		prefix("(", 200, function () {
-			index--;
-			var close = findMatchingDelimiter("(", ")", index),
-                end = tokens[close];
-			var next = tokens[close + 1];
-			if (next && next.value === "{" && next.line === end.line) {
-				var args = [],
-                    j = 0;
-				while (index + (++j) < close) {
+        prefix("(", 200, () => {
+            index--;
+            var close = findMatchingDelimiter("(", ")", index);
+            var end = tokens[close];
+            var next = tokens[close + 1];
+            if (next && next.value === "{" && next.line === end.line) {
+                var args = [];
+                var j = 0;
+                while (index + (++j) < close) {
 					var arg = tokens[index + j];
 					if (arg.type !== "identifier") error(tokens[index + j], "Function parameters must be identifiers.");
 					args.push(arg.value);
 				}
-				var match = findMatchingDelimiter("{", "}", close + 1);
-				var obj = {
+                var match = findMatchingDelimiter("{", "}", close + 1);
+                var obj = {
 					type: "function",
 					"arguments": args,
 					value: parse(tokens.slice(close + 2, match), scoping.newFunction(scope, args))
 				};
-				token = tokens[index = match + 1];
-				return obj;
-			} else {
-				var inside = tokens.slice(index + 1, close), value;
-				if (!inside.length) value = [];
+                token = tokens[index = match + 1];
+                return obj;
+            } else {
+                var inside = tokens.slice(index + 1, close);
+                var value;
+                if (!inside.length) value = [];
 				else {
 					value = parseExpressions(inside);
 					if (value.length > 1) error(token, "Only one expression allowed inside parentheses.");
 					value = value[0];
 				}
-				token = tokens[index = close + 1];
-				return {
+                token = tokens[index = close + 1];
+                return {
 					type: "parenthetic",
-					value: value,
+					value,
 					returnType: getType(value)
 				};
-			}
-		});
+            }
+        });
 
-		prefix("{", 150, function () {
+        prefix("{", 150, () => {
 			index--;
 			var match = findMatchingDelimiter("{", "}", index);
 			var obj = {
@@ -398,7 +400,7 @@ var parse = function (tokens, scope) {
 			return obj;
 		});
 
-		prefix("[", 150, function () {
+        prefix("[", 150, () => {
 			index--;
 			var match = findMatchingDelimiter("[", "]", index);
 			var obj = {
@@ -410,7 +412,7 @@ var parse = function (tokens, scope) {
 			return obj;
 		});
 
-		infix(".", 100).check = check(function (obj) {
+        infix(".", 100).check = check(obj => {
 			var right = obj.second;
 			if (!(right.type === "identifier" ||
             right.type === "string" ||
@@ -423,26 +425,27 @@ var parse = function (tokens, scope) {
 			return returnTypes.unknown;
 		});
 
-		prefix("!", 90).check = check(
+        prefix("!", 90).check = check(
             ["boolean", "boolean"]);
-		prefix("-", 90).check = check(
+        prefix("-", 90).check = check(
             ["number", "number"]);
-		prefix("~", 91).check = check(function (obj) {
+        prefix("~", 91).check = check(obj => {
 			if (obj.first.type !== "identifier") {
 				error(obj, "Only identifiers can be referenced.");
 			}
 		});
-		prefix("`", 90).check = check(
+        prefix("`", 90).check = check(
             ["_", "function"]);
 
-		infixr("^", 75).check = check(
+        infixr("^", 75).check = check(
             [["number", "number", "number"],
             ["array", "function", "array"],
             ["object", "function", "object"]]);
 
-		infix("*", 70, function (left) {
-			var right, returnType;
-			if (tokens[index].value === "[") {
+        infix("*", 70, left => {
+            var right;
+            var returnType;
+            if (tokens[index].value === "[") {
 				if (!typesMatch(getType(left), "function")) error(value, "Only functions can be called");
 				right = expression(125);
 				return {
@@ -451,32 +454,33 @@ var parse = function (tokens, scope) {
 					args: right.value
 				};
 			}
-			right = expression(71);
-			var tL = getType(left), tR = getType(right);
-			if (typesMatch(tL, "number") && typesMatch(tR, "number")) returnType = "number";
+            right = expression(71);
+            var tL = getType(left);
+            var tR = getType(right);
+            if (typesMatch(tL, "number") && typesMatch(tR, "number")) returnType = "number";
 			else if (typesMatch(tL, "function") && typesMatch(tR, "array")) returnType = "unknown";
 			else if (typesMatch(tL, "function") && typesMatch(tR, "function")) returnType = "function";
 			else error([left, right], "The * operator does not support operands of type '" + tL + " " + tR + "'");
-			return {
+            return {
 				id: "*",
 				first: left,
 				second: right,
-				returnType: returnType
+				returnType
 			};
-		});
-		infix("/", 70).check = check(
+        });
+        infix("/", 70).check = check(
             [["number", "number", "number"]]);
-		infix("%", 70).check = check(
+        infix("%", 70).check = check(
             [["number", "number", "number"]]);
 
-		infix("+", 65).check = check(
+        infix("+", 65).check = check(
             [["number", "number", "number"],
             ["array", "function"],
             ["_", "function"]]);
-		infix("-", 65).check = check(
+        infix("-", 65).check = check(
             [["number", "number", "number"]]);
 
-		infix("&", 60).check = check(
+        infix("&", 60).check = check(
             [["array", "_", "array"],
             ["_", "array", "array"],
             ["string", "string", "string"],
@@ -484,12 +488,12 @@ var parse = function (tokens, scope) {
             ["number", "string", "string"],
             ["object", "object", "object"]]);
 
-		var checkFunctionValues = function (value, args) {
+        var checkFunctionValues = (value, args) => {
 			if (!typesMatch(getType(value), "function")) error(value, "Only functions can be called");
-			if (args) args.map(function (a) { getType(a); });
+			if (args) args.map(a => { getType(a); });
 		};
 
-		suffix("!", 98, function (left) {
+        suffix("!", 98, left => {
 			checkFunctionValues(left);
 			return {
 				id: "call",
@@ -497,7 +501,7 @@ var parse = function (tokens, scope) {
 				args: []
 			};
 		});
-		infix("|", 95, function (left) {
+        infix("|", 95, left => {
 			var bp = 22;
 			var args = [expression(bp)];
 			while (token.value === ",") {
@@ -508,11 +512,11 @@ var parse = function (tokens, scope) {
 			return {
 				id: "call",
 				value: left,
-				args: args
+				args
 			};
 		});
 
-		var infixArgs = function (args) {
+        var infixArgs = args => {
 			if (token.value === "|") {
 				do {
 					advance();
@@ -521,19 +525,19 @@ var parse = function (tokens, scope) {
 			}
 		};
 
-		infixr("\\", 54, function (left) {
+        infixr("\\", 54, left => {
 			var args = [left];
 			var value = expression(80, "|");
 			infixArgs(args);
 			checkFunctionValues(value, args);
 			return {
 				id: "call",
-				value: value,
-				args: args
+				value,
+				args
 			};
 		});
 
-		infix(",", 21, function (left) {
+        infix(",", 21, left => {
 			var args = [left, expression(56)];
 			while (token.value === ",") {
 				advance();
@@ -546,78 +550,78 @@ var parse = function (tokens, scope) {
 			checkFunctionValues(value, args);
 			return {
 				id: "call",
-				value: value,
-				args: args
+				value,
+				args
 			};
 		});
 
-		infix(">", 45).check = check(
+        infix(">", 45).check = check(
             [["number", "number", "boolean"],
             ["string", "string", "boolean"]]);
-		infix(">=", 45).check = check(
+        infix(">=", 45).check = check(
             [["number", "number", "boolean"],
             ["string", "string", "boolean"]]);
-		infix("<", 45).check = check(
+        infix("<", 45).check = check(
             [["number", "number", "boolean"],
             ["string", "string", "boolean"]]);
-		infix("<=", 45).check = check(
+        infix("<=", 45).check = check(
             [["number", "number", "boolean"],
             ["string", "string", "boolean"]]);
 
-		infix("=", 40).check = check(
+        infix("=", 40).check = check(
             [["_", "_", "boolean"]]);
-		infix("!=", 40).check = check(
+        infix("!=", 40).check = check(
             [["_", "_", "boolean"]]);
 
-		infixr("&&", 35).check = check(
+        infixr("&&", 35).check = check(
             [["boolean", "boolean", "boolean"]]);
 
-		infixr("^^", 30).check = check(
+        infixr("^^", 30).check = check(
             [["boolean", "boolean", "boolean"]]);
 
-		infixr("||", 25).check = check(
+        infixr("||", 25).check = check(
             [["boolean", "boolean", "boolean"]]);
 
-		(function () {
-			var c = assignment.checks;
-			assignment(":", 15, {
+        ((() => {
+            var c = assignment.checks;
+            assignment(":", 15, {
 				checkLeft: [],
 				checkScope: [c.isLocalReadonly],
 				mutability: "mutable",
 				local: true,
 				enumerable: true
 			});
-			assignment("~:", 15, {
+            assignment("~:", 15, {
 				checkLeft: [c.leftIsReference],
 				checkScope: [c.isLocal, c.isUndefined, c.isReadonly],
 				mutability: "mutable",
 				local: false,
 				enumerable: true
 			});
-//			assignment("!:", 15, {
-//				checkLeft: [c.leftIsProperty],
-//				checkScope: [c.isLocal, c.isOutsideObjectScope],
-//				mutability: "mutable",
-//				local: true,
-//				enumerable: false
-//			});
+            //			assignment("!:", 15, {
+            //				checkLeft: [c.leftIsProperty],
+            //				checkScope: [c.isLocal, c.isOutsideObjectScope],
+            //				mutability: "mutable",
+            //				local: true,
+            //				enumerable: false
+            //			});
 
-			assignment("::", 10, {
+            assignment("::", 10, {
 				checkLeft: [c.leftIsReference],
 				checkScope: [c.isLocal],
 				mutability: "immutable",
 				local: true,
 				enumerable: true
 			});
-//			assignment("!::", 10, {
-//				checkLeft: [c.leftIsReference, c.leftIsProperty],
-//				checkScope: [c.isLocal, c.isOutsideObjectScope],
-//				mutability: "immutable",
-//				local: true,
-//				enumerable: false
-//			});
+            //			assignment("!::", 10, {
+            //				checkLeft: [c.leftIsReference, c.leftIsProperty],
+            //				checkScope: [c.isLocal, c.isOutsideObjectScope],
+            //				mutability: "immutable",
+            //				local: true,
+            //				enumerable: false
+            //			});
 
-			var compoundChecks = {
+            var compoundChecks = {
 				":": {
 					checkLeft: [c.leftIsReference],
 					checkScope: [c.isUndefined, c.isNotLocal, c.isReadonly],
@@ -634,24 +638,24 @@ var parse = function (tokens, scope) {
 				}
 			};
 
-			var assigns = [":", "~:"], binaryOps = ["&", "+", "-", "*", "/", "%", "^"];
-			for (var i = 0; i < assigns.length; i++) {
+            var assigns = [":", "~:"];
+            var binaryOps = ["&", "+", "-", "*", "/", "%", "^"];
+            for (var i = 0; i < assigns.length; i++) {
 				var asgn = assigns[i];
 				for (var j = 0; j < binaryOps.length; j++) {
 					var op = binaryOps[j];
 					var checks = compoundChecks[asgn];
-					assignment(asgn + op, 20, checks, { asgn: asgn, op: op, opFirst: false });
-					assignment(op + asgn, 20, checks, { asgn: asgn, op: op, opFirst: true });
+					assignment(asgn + op, 20, checks, { asgn, op, opFirst: false });
+					assignment(op + asgn, 20, checks, { asgn, op, opFirst: true });
 				}
 			}
+        }))();
 
-		})();
-
-		infix("=>", 5).check = check(function (obj) {
+        infix("=>", 5).check = check(obj => {
 			if (scope.type !== "function") error(obj, "Return statements can only occur in functions");
 		});
-		var i;
-		for (i = 0; i < tokens.length; i++) {
+        var i;
+        for (i = 0; i < tokens.length; i++) {
 			var t = tokens[i];
 			if (t.type !== "operator") {
 				t.bindingPower = 0;
@@ -661,21 +665,21 @@ var parse = function (tokens, scope) {
 			}
 		}
 
-		for (i = 0; i < tokens.length; i = ++index) {
+        for (i = 0; i < tokens.length; i = ++index) {
 			token = tokens[i];
 			var value = expression(tokens[i].bindingPower);
 			var args = [i, index - i].concat(value);
-			tokens.splice.apply(tokens, args);
+			tokens.splice(...args);
 			index -= index - i - (args.length - 3);
 		}
-		tokens.pop();
-		return tokens;
-	};
+        tokens.pop();
+        return tokens;
+    };
 
-	var statements = parseExpressions(tokens);
-	while (statements.length && statements[statements.length - 1].type === "(end)") statements.pop();
-	var i;
-	for (i = 0; i < statements.length; i++) {
+    var statements = parseExpressions(tokens);
+    while (statements.length && statements[statements.length - 1].type === "(end)") statements.pop();
+    var i;
+    for (i = 0; i < statements.length; i++) {
 		if (i === statements.length - 1 && scoping.isFunction(scope)) break;
 		var statement = statements[i];
 		if (statement.assignment) continue;
@@ -684,9 +688,9 @@ var parse = function (tokens, scope) {
 			default: error(statements[i], "A statement must be an assignment, a function call, or a return statement.");
 		}
 	}
-	if ((!statements[i] || statements[i].id === "=>") && scoping.isFunction(scope)) statements.push({
+    if ((!statements[i] || statements[i].id === "=>") && scoping.isFunction(scope)) statements.push({
 		"type": "parenthetic",
 		"value": []
 	});
-	return statements;
+    return statements;
 };

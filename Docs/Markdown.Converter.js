@@ -50,7 +50,7 @@ else
 // file before uncommenting it.
 //
 
-(function () {
+((() => {
 
     function identity(x) { return x; }
     function returnFalse(x) { return false; }
@@ -59,7 +59,7 @@ else
 
     HookCollection.prototype = {
 
-        chain: function (hookname, func) {
+        chain(hookname, func) {
             var original = this[hookname];
             if (!original)
                 throw new Error("unknown hook " + hookname);
@@ -67,17 +67,17 @@ else
             if (original === identity)
                 this[hookname] = func;
             else
-                this[hookname] = function (x) { return func(original(x)); }
+                this[hookname] = x => func(original(x))
         },
-        set: function (hookname, func) {
+        set(hookname, func) {
             if (!this[hookname])
                 throw new Error("unknown hook " + hookname);
             this[hookname] = func;
         },
-        addNoop: function (hookname) {
+        addNoop(hookname) {
             this[hookname] = identity;
         },
-        addFalse: function (hookname) {
+        addFalse(hookname) {
             this[hookname] = returnFalse;
         }
     };
@@ -93,10 +93,10 @@ else
     // to be a problem)
     function SaveHash() { }
     SaveHash.prototype = {
-        set: function (key, value) {
+        set(key, value) {
             this["s_" + key] = value;
         },
-        get: function (key) {
+        get(key) {
             return this["s_" + key];
         }
     };
@@ -120,7 +120,7 @@ else
         // (see _ProcessListItems() for details):
         var g_list_level;
 
-        this.makeHtml = function (text) {
+        this.makeHtml = text => {
 
             //
             // Main function. The order in which other subs are called here is
@@ -224,7 +224,7 @@ else
             */
 
             text = text.replace(/^[ ]{0,3}\[(.+)\]:[ \t]*\n?[ \t]*<?(\S+?)>?(?=\s|$)[ \t]*\n?[ \t]*((\n*)["(](.+?)[")][ \t]*)?(?:\n+)/gm,
-                function (wholeMatch, m1, m2, m3, m4, m5) {
+                (wholeMatch, m1, m2, m3, m4, m5) => {
                     m1 = m1.toLowerCase();
                     g_urls.set(m1, _EncodeAmpsAndAngles(m2));  // Link IDs are case-insensitive
                     if (m4) {
@@ -450,7 +450,7 @@ else
 
             var regex = /(<[a-z\/!$]("[^"]*"|'[^']*'|[^'">])*>|<!(--(?:|(?:[^>-]|-[^>])(?:[^-]|-[^-])*)--)>)/gi;
 
-            text = text.replace(regex, function (wholeMatch) {
+            text = text.replace(regex, wholeMatch => {
                 var tag = wholeMatch.replace(/(.)<\/?code>(?=.)/g, "$1`");
                 tag = escapeCharacters(tag, wholeMatch.charAt(1) == "!" ? "\\`*_/" : "\\`*_"); // also escape slashes in comments to prevent autolinking there -- http://meta.stackoverflow.com/questions/95987
                 return tag;
@@ -718,11 +718,11 @@ else
             //  --------
             //
             text = text.replace(/^(.+)[ \t]*\n=+[ \t]*\n+/gm,
-                function (wholeMatch, m1) { return "<h1>" + _RunSpanGamut(m1) + "</h1>\n\n"; }
+                (wholeMatch, m1) => "<h1>" + _RunSpanGamut(m1) + "</h1>\n\n"
             );
 
             text = text.replace(/^(.+)[ \t]*\n-+[ \t]*\n+/gm,
-                function (matchFound, m1) { return "<h2>" + _RunSpanGamut(m1) + "</h2>\n\n"; }
+                (matchFound, m1) => "<h2>" + _RunSpanGamut(m1) + "</h2>\n\n"
             );
 
             // atx-style headers:
@@ -745,7 +745,7 @@ else
             */
 
             text = text.replace(/^(\#{1,6})[ \t]*(.+?)[ \t]*\#*\n+/gm,
-                function (wholeMatch, m1, m2) {
+                (wholeMatch, m1, m2) => {
                     var h_level = m1.length;
                     return "<h" + h_level + ">" + _RunSpanGamut(m2) + "</h" + h_level + ">\n\n";
                 }
@@ -790,7 +790,7 @@ else
             var whole_list = /^(([ ]{0,3}([*+-]|\d+[.])[ \t]+)[^\r]+?(~0|\n{2,}(?=\S)(?![ \t]*(?:[*+-]|\d+[.])[ \t]+)))/gm;
 
             if (g_list_level) {
-                text = text.replace(whole_list, function (wholeMatch, m1, m2) {
+                text = text.replace(whole_list, (wholeMatch, m1, m2) => {
                     var list = m1;
                     var list_type = (m2.search(/[*+-]/g) > -1) ? "ul" : "ol";
 
@@ -806,7 +806,7 @@ else
                 });
             } else {
                 whole_list = /(\n\n|^\n?)(([ ]{0,3}([*+-]|\d+[.])[ \t]+)[^\r]+?(~0|\n{2,}(?=\S)(?![ \t]*(?:[*+-]|\d+[.])[ \t]+)))/g;
-                text = text.replace(whole_list, function (wholeMatch, m1, m2, m3) {
+                text = text.replace(whole_list, (wholeMatch, m1, m2, m3) => {
                     var runup = m1;
                     var list = m2;
 
@@ -890,7 +890,7 @@ else
             var re = new RegExp("(^[ \\t]*)(" + marker + ")[ \\t]+([^\\r]+?(\\n+))(?=(~0|\\1(" + marker + ")[ \\t]+))", "gm");
             var last_item_had_a_double_newline = false;
             list_str = list_str.replace(re,
-                function (wholeMatch, m1, m2, m3) {
+                (wholeMatch, m1, m2, m3) => {
                     var item = m3;
                     var leading_space = m1;
                     var ends_with_double_newline = /\n\n$/.test(item);
@@ -939,7 +939,7 @@ else
             text += "~0";
 
             text = text.replace(/(?:\n\n|^)((?:(?:[ ]{4}|\t).*\n+)+)(\n*[ ]{0,3}[^ \t\n]|(?=~0))/g,
-                function (wholeMatch, m1, m2) {
+                (wholeMatch, m1, m2) => {
                     var codeblock = m1;
                     var nextChar = m2;
 
@@ -1005,7 +1005,7 @@ else
             */
 
             text = text.replace(/(^|[^\\])(`+)([^\r]*?[^`])\2(?!`)/gm,
-                function (wholeMatch, m1, m2, m3, m4) {
+                (wholeMatch, m1, m2, m3, m4) => {
                     var c = m3;
                     c = c.replace(/^([ \t]*)/g, ""); // leading whitespace
                     c = c.replace(/[ \t]*$/g, ""); // trailing whitespace
@@ -1076,7 +1076,7 @@ else
             */
 
             text = text.replace(/((^[ \t]*>[ \t]?.+\n(.+\n)*\n*)+)/gm,
-                function (wholeMatch, m1) {
+                (wholeMatch, m1) => {
                     var bq = m1;
 
                     // attacklab: hack around Konqueror 3.5.4 bug:
@@ -1094,7 +1094,7 @@ else
                     // These leading spaces screw with <pre> content, so we need to fix that:
                     bq = bq.replace(
                             /(\s*<pre>[^\r]+?<\/pre>)/gm,
-                        function (wholeMatch, m1) {
+                        (wholeMatch, m1) => {
                             var pre = m1;
                             // attacklab: hack around Konqueror 3.5.4 bug:
                             pre = pre.replace(/^  /mg, "~0");
@@ -1151,7 +1151,7 @@ else
                     var foundAny = true;
                     while (foundAny) { // we may need several runs, since the data may be nested
                         foundAny = false;
-                        grafsOut[i] = grafsOut[i].replace(/~K(\d+)K/g, function (wholeMatch, id) {
+                        grafsOut[i] = grafsOut[i].replace(/~K(\d+)K/g, (wholeMatch, id) => {
                             foundAny = true;
                             return g_html_blocks[id];
                         });
@@ -1206,7 +1206,7 @@ else
 
             //  autolink anything like <http://example.com>
             
-            var replacer = function (wholematch, m1) { return "<a href=\"" + m1 + "\">" + pluginHooks.plainLinkText(m1) + "</a>"; }
+            var replacer = (wholematch, m1) => "<a href=\"" + m1 + "\">" + pluginHooks.plainLinkText(m1) + "</a>"
             text = text.replace(/<((https?|ftp):[^'">\s]+)>/gi, replacer);
 
             // Email addresses: <address@domain.foo>
@@ -1238,7 +1238,7 @@ else
             // Swap back in all the special characters we've hidden.
             //
             text = text.replace(/~E(\d+)E/g,
-                function (wholeMatch, m1) {
+                (wholeMatch, m1) => {
                     var charCodeToReplace = parseInt(m1);
                     return String.fromCharCode(charCodeToReplace);
                 }
@@ -1266,11 +1266,11 @@ else
             if (!/\t/.test(text))
                 return text;
 
-            var spaces = ["    ", "   ", "  ", " "],
-            skew = 0,
-            v;
+            var spaces = ["    ", "   ", "  ", " "];
+            var skew = 0;
+            var v;
 
-            return text.replace(/[\n\t]/g, function (match, offset) {
+            return text.replace(/[\n\t]/g, (match, offset) => {
                 if (match === "\n") {
                     skew = offset + 1;
                     return match;
@@ -1294,7 +1294,7 @@ else
 
             var len = url.length;
 
-            return url.replace(_problemUrlChars, function (match, offset) {
+            return url.replace(_problemUrlChars, (match, offset) => {
                 if (match == "~D") // escape for dollar
                     return "%24";
                 if (match == ":") {
@@ -1329,4 +1329,4 @@ else
 
     }; // end of the Markdown.Converter constructor
 
-})();
+}))();

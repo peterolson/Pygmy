@@ -1,19 +1,17 @@
-var lib = (function () {
-	var serialize = function (obj) {
-		var convertFunction = function (fn) {
-			if (typeof fn === "function") return function (args) {
-				var a = args.map(function (arg) { arg = arg instanceof Array ? arg : arg.value; if (!fn.lazy && typeof arg === "function" && arg.thunk) arg = arg(); return arg; });
-				return convertFunction(fn.apply(null, a));
+var lib = ((() => {
+	var serialize = obj => {
+		var convertFunction = fn => {
+			if (typeof fn === "function") return args => {
+				var a = args.map(arg => { arg = arg instanceof Array ? arg : arg.value; if (!fn.lazy && typeof arg === "function" && arg.thunk) arg = arg(); return arg; });
+				return convertFunction(fn(...a));
 			};
 			return fn;
 		};
-		var convertObject = function (obj) {
-			return {
-				value: obj,
-				mutability: 1,
-				enumerable: 1
-			};
-		};
+		var convertObject = obj => ({
+            value: obj,
+            mutability: 1,
+            enumerable: 1
+        });
 		if (typeof obj === "function") return convertFunction(obj);
 		if (typeof obj === "object" && obj !== null && !(obj instanceof Array)) {
 			for (var i in obj) {
@@ -24,17 +22,17 @@ var lib = (function () {
 		return obj;
 	};
 
-	var checkFunction = function (fn) {
+	var checkFunction = fn => {
 		if (typeof fn !== "function") throw "Expected function argument";
 	};
 
-	var type = function (a) {
+	var type = a => {
 		if (a instanceof Array) return "array";
 		if (typeof a === "undefined" || a === null) return "nil";
 		return typeof a;
 	};
 
-	var lazy = function (fn) {
+	var lazy = fn => {
 		fn.lazy = true;
 		return fn;
 	};
@@ -43,7 +41,7 @@ var lib = (function () {
 		"true": true,
 		"false": false,
 		"nil": null,
-		"?": lazy(function (a, b) {
+		"?": lazy((a, b) => {
 			var exists = typeof a !== undefined && a !== null;
 			if (typeof b !== undefined) {
 				//if (typeof b === "function") b = fn(b, []);
@@ -51,21 +49,21 @@ var lib = (function () {
 			}
 			return exists;
 		}),
-		type: function (a) {
+		type(a) {
 			return type(a);
 		},
-		alert: function (msg) {
+		alert(msg) {
 			msg = p(msg, "toString");
 			alert(msg);
 			return msg;
 		},
-		prompt: function (msg, defaultText) {
+		prompt(msg, defaultText) {
 			return prompt(msg, defaultText);
 		},
-		error: function (err) {
+		error(err) {
 			throw err;
 		},
-		"while": lazy(function (cond, fn) {
+		"while": lazy((cond, fn) => {
 			var x;
 			while (f(cond, []) === true) {
 				x = f(fn, []);
@@ -73,7 +71,7 @@ var lib = (function () {
 			}
 			return x;
 		}),
-		until: lazy(function (cond, fn) {
+		until: lazy((cond, fn) => {
 			var x;
 			while (f(cond, []) === false) {
 				x = f(fn, []);
@@ -81,35 +79,35 @@ var lib = (function () {
 			}
 			return x;
 		}),
-		"if": lazy(function (cond, result) {
+		"if": lazy((cond, result) => {
 			if (f(cond, []) === true) return f(result, []);
 		}),
-		unless: lazy(function (cond, result) {
+		unless: lazy((cond, result) => {
 			if (f(cond, []) === false) return f(result, []);
 		}),
 		array: {
-			toString: function (arr) {
+			toString(arr) {
 				return "[(" + arr.join(") (") + ")]";
 			},
-			head: function (arr) {
+			head(arr) {
 				return arr[0];
 			},
-			tail: function (arr) {
+			tail(arr) {
 				return arr.slice(1);
 			},
-			foot: function (arr) {
+			foot(arr) {
 				return arr[arr.length - 1];
 			},
-			body: function (arr) {
+			body(arr) {
 				return arr.slice(0, -1);
 			},
-			length: function (arr) {
+			length(arr) {
 				return arr.length;
 			},
-			isEmpty: function (arr) {
+			isEmpty(arr) {
 				return !arr.length;
 			},
-			prepend: function (arr) {
+			prepend(arr) {
 				return function (value, v2) {
 					if (typeof v2 !== "undefined") {
 						value = [value];
@@ -120,7 +118,7 @@ var lib = (function () {
 					return [].concat(value, arr);
 				};
 			},
-			append: function (arr) {
+			append(arr) {
 				return function (value, v2) {
 					if (typeof v2 !== "undefined") {
 						value = [value];
@@ -131,91 +129,90 @@ var lib = (function () {
 					return arr.concat(value);
 				};
 			},
-			concat: function (arr) {
-				return function (arr2) {
+			concat(arr) {
+				return arr2 => {
 					if (!(arr2 instanceof Array)) throw "Expected array argument";
 					return arr.concat(arr2);
 				};
 			},
-			range: function (arr) {
-				return function (start, end) {
-					return arr.slice(start, end);
-				};
+			range(arr) {
+				return (start, end) => arr.slice(start, end);
 			},
-			remove: function (arr) {
-				return function (start, end) {
+			remove(arr) {
+				return (start, end) => {
 					end = end || start;
 					end++;
 					return arr.slice(0, start).concat(arr.slice(end));
 				};
 			},
-			insert: function (arr) {
-				return function (index, elems) {
+			insert(arr) {
+				return (index, elems) => {
 					if (!(elems instanceof Array)) throw "Expected array argument";
 					return arr.slice(0, index).concat(elems, arr.slice(index));
 				};
 			},
-			replace: function (arr) {
-				return function (index, fn) {
+			replace(arr) {
+				return (index, fn) => {
 					var x = arr.slice(0, index).concat([f(fn, [arr[index], index, arr])], arr.slice(index + 1));
 					return x;
 				};
 			},
-			join: function (arr) {
-				return function (separator) {
+			join(arr) {
+				return separator => {
 					separator = separator || "";
 					if (typeof separator !== "string") throw "Expected string argument.";
-					arr = arr.map(function (v) { return p(v, "toString"); });
+					arr = arr.map(v => p(v, "toString"));
 					return arr.join(separator);
 				};
 			},
-			reverse: function (arr) {
+			reverse(arr) {
 				var ret = [];
 				for (var i = arr.length - 1; i >= 0; i--) {
 					ret.push(arr[i]);
 				}
 				return ret;
 			},
-			sort: function (arr) {
-				return function (fn) {
-					if (typeof fn !== "function") fn = function (a, b) {
-						var aT = type(a), bT = type(b);
-						if (aT !== bT) {
+			sort(arr) {
+				return fn => {
+					if (typeof fn !== "function") fn = (a, b) => {
+                        var aT = type(a);
+                        var bT = type(b);
+                        if (aT !== bT) {
 							return parseInt(aT, 36) - parseInt(bT, 36);
 						}
-						if (a > b) return 1;
-						if (a < b) return -1;
-						return 0;
-					};
+                        if (a > b) return 1;
+                        if (a < b) return -1;
+                        return 0;
+                    };
 					return arr.slice().sort(fn);
 				};
 			},
-			indexOf: function (arr) {
-				return function (value) {
+			indexOf(arr) {
+				return value => {
 					for (var i = 0; i < arr.length; i++) {
 						if (q(arr[i], value)) return i;
 					}
 					return -1;
 				};
 			},
-			lastIndexOf: function (arr) {
-				return function (value) {
+			lastIndexOf(arr) {
+				return value => {
 					for (var i = arr.length - 1; i >= 0; i--) {
 						if (q(arr[i], value)) return i;
 					}
 					return -1;
 				};
 			},
-			contains: function (arr) {
-				return function (value) {
+			contains(arr) {
+				return value => {
 					for (var i = 0; i < arr.length; i++) {
 						if (q(arr[i], value)) return true;
 					}
 					return false;
 				};
 			},
-			forEach: function (arr) {
-				return function (fn) {
+			forEach(arr) {
+				return fn => {
 					checkFunction(fn);
 					for (var i in arr) {
 						if (!arr.hasOwnProperty(i)) continue;
@@ -223,21 +220,24 @@ var lib = (function () {
 					}
 				};
 			},
-			fill: function (arr) {
-				var ret = [], i;
-				for (i = 1; i < arr.length; i++) {
-					var from = arr[i - 1], to = arr[i], j;
-					if (typeof from !== "number" || typeof to !== "number") throw "Can only fill numeric arrays";
-					if (from < to)
+			fill(arr) {
+                var ret = [];
+                var i;
+                for (i = 1; i < arr.length; i++) {
+                    var from = arr[i - 1];
+                    var to = arr[i];
+                    var j;
+                    if (typeof from !== "number" || typeof to !== "number") throw "Can only fill numeric arrays";
+                    if (from < to)
 						for (j = from; j < to; j++) ret.push(j);
 					else
 						for (j = from; j > to; j--) ret.push(j);
-				}
-				ret.push(arr[arr.length - 1]);
-				return ret;
-			},
-			filter: function (arr) {
-				return function (fn) {
+                }
+                ret.push(arr[arr.length - 1]);
+                return ret;
+            },
+			filter(arr) {
+				return fn => {
 					checkFunction(fn);
 					var ret = [];
 					for (var i in arr) {
@@ -247,8 +247,8 @@ var lib = (function () {
 					return ret;
 				};
 			},
-			every: function (arr) {
-				return function (fn) {
+			every(arr) {
+				return fn => {
 					checkFunction(fn);
 					for (var i in arr) {
 						if (!arr.hasOwnProperty(i)) continue;
@@ -257,8 +257,8 @@ var lib = (function () {
 					return true;
 				};
 			},
-			some: function (arr) {
-				return function (fn) {
+			some(arr) {
+				return fn => {
 					checkFunction(fn);
 					for (var i in arr) {
 						if (!arr.hasOwnProperty(i)) continue;
@@ -267,8 +267,8 @@ var lib = (function () {
 					return false;
 				};
 			},
-			map: function (arr) {
-				return function (fn) {
+			map(arr) {
+				return fn => {
 					checkFunction(fn);
 					var ret = [];
 					for (var i in arr) {
@@ -278,40 +278,42 @@ var lib = (function () {
 					return ret;
 				};
 			},
-			reduce: function (arr) {
-				return function (fn, seed) {
-					var accum, i;
-					if (typeof seed === "undefined") {
+			reduce(arr) {
+				return (fn, seed) => {
+                    var accum;
+                    var i;
+                    if (typeof seed === "undefined") {
 						if (!arr.length) throw "Cannot reduce empty array.";
 						accum = arr[0]; i = 1;
 					} else {
 						accum = seed; i = 0;
 					}
-					while (i < arr.length) {
+                    while (i < arr.length) {
 						accum = f(fn, [accum, arr[i], i, arr]);
 						i++;
 					}
-					return accum;
-				};
+                    return accum;
+                };
 			},
-			reduceBack: function (arr) {
-				return function (fn, seed) {
-					var accum, i;
-					if (typeof seed === "undefined") {
+			reduceBack(arr) {
+				return (fn, seed) => {
+                    var accum;
+                    var i;
+                    if (typeof seed === "undefined") {
 						if (!arr.length) throw "Cannot reduce empty array.";
 						accum = arr[arr.length - 1]; i = arr.length - 2;
 					} else {
 						accum = seed; i = arr.length - 1;
 					}
-					while (i >= 0) {
+                    while (i >= 0) {
 						accum = f(fn, [accum, arr[i], i, arr]);
 						i--;
 					}
-					return accum;
-				};
+                    return accum;
+                };
 			},
-			multiply: function (arr) {
-				return function (arr2, fn) {
+			multiply(arr) {
+				return (arr2, fn) => {
 					var ret = [];
 					for (var i = 0; i < arr.length; i++) {
 						for (var j = 0; j < arr2.length; j++) {
@@ -319,9 +321,9 @@ var lib = (function () {
 						}
 					}
 					return ret;
-				}
+				};
 			},
-			sum: function (arr) {
+			sum(arr) {
 				var sum = 0;
 				for (var i = 0; i < arr.length; i++) {
 					if (typeof arr[i] === "number") sum += arr[i];
@@ -329,7 +331,7 @@ var lib = (function () {
 				}
 				return sum;
 			},
-			mean: function (arr) {
+			mean(arr) {
 				var sum = 0;
 				if (!arr.length) throw "Cannot find mean of empty array";
 				for (var i = 0; i < arr.length; i++) {
@@ -338,78 +340,81 @@ var lib = (function () {
 				}
 				return sum / arr.length;
 			},
-			max: function (arr) {
+			max(arr) {
 				var max = Number.MIN_VALUE;
 				for (var i = 0; i < arr.length; i++) {
 					if (arr[i] > max) max = arr[i];
 				}
 				return max === Number.MIN_VALUE ? undefined : max;
 			},
-			min: function (arr) {
+			min(arr) {
 				var min = Number.MAX_VALUE;
 				for (var i = 0; i < arr.length; i++) {
 					if (arr[i] < min) min = arr[i];
 				}
 				return min === Number.MAX_VALUE ? undefined : min;
 			},
-			random: function (arr) {
+			random(arr) {
 				return arr[(Math.random() * arr.length) | 0];
 			},
-			shuffle: function (arr) {
-				var ret = arr.slice(), i = ret.length;
-				if (i === 0) throw "cannot shuffle empty array";
-				while (--i) {
-					var j = Math.floor(Math.random() * (i + 1)),
-                    ti = ret[i], tj = ret[j];
-					ret[i] = tj; ret[j] = ti;
-				}
-				return ret;
-			}
+			shuffle(arr) {
+                var ret = arr.slice();
+                var i = ret.length;
+                if (i === 0) throw "cannot shuffle empty array";
+                while (--i) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    var ti = ret[i];
+                    var tj = ret[j];
+                    ret[i] = tj;ret[j] = ti;
+                }
+                return ret;
+            }
 		},
 		object: {
-			toString: function (obj) { return "_object_"; }
+			toString(obj) { return "_object_"; }
 		},
 		string: {
-			toString: function (str) { return str; },
-			split: function (str) {
-				return function (sep, lim) {
+			toString(str) { return str; },
+			split(str) {
+				return (sep, lim) => {
 					sep = sep || "";
 					if (typeof sep !== "string") throw "Expected string argument";
 					if (lim && typeof lim !== "number") throw "Expected number argument";
 					return str.split(sep, lim);
 				};
 			},
-			reverse: function (str) {
+			reverse(str) {
 				return str.split("").reverse().join("");
 			},
-			format: function (str) {
-				return function (obj) {
+			format(str) {
+				return obj => {
 					newStr = "";
 					for (var i = 0, j; i < str.length; i++) {
 						j = i;
 						if (str[i] === "#") {
-							j++;
-							var name = "", value = "";
-							if (str[j] === "(") {
+                            j++;
+                            var name = "";
+                            var value = "";
+                            if (str[j] === "(") {
 								while (str[++j] !== ")") name += str[j];
 							} else {
 								name = str[j];
 							}
-							if (!obj.hasOwnProperty(name)) {
+                            if (!obj.hasOwnProperty(name)) {
 								newStr += str[i];
 								continue;
 							}
-							var match = obj[name];
-							j++;
-							if (str[j] === "{") {
+                            var match = obj[name];
+                            j++;
+                            if (str[j] === "{") {
 								while (str[++j] !== "}") value += str[j];
 								j++;
 							}
-							if (typeof match === "function") match = f(match, [value]);
-							newStr += p(match, "toString");
-							i = j - 1;
-							continue;
-						}
+                            if (typeof match === "function") match = f(match, [value]);
+                            newStr += p(match, "toString");
+                            i = j - 1;
+                            continue;
+                        }
 						newStr += str[i];
 					}
 					return newStr;
@@ -417,18 +422,18 @@ var lib = (function () {
 			}
 		},
 		number: {
-			toString: function (n) { return n + ""; },
-			floor: function (n) { return Math.floor(n); },
-			ceil: function (n) { return Math.ceil(n); }
+			toString(n) { return n + ""; },
+			floor(n) { return Math.floor(n); },
+			ceil(n) { return Math.ceil(n); }
 		},
 		boolean: {
-			toString: function (bl) { return bl.toString(); }
+			toString(bl) { return bl.toString(); }
 		},
 		"function": {
-			toString: function (fn) { return "_function_"; }
+			toString(fn) { return "_function_"; }
 		},
 		"_nil": {
-			toString: function () { return "nil"; }
+			toString() { return "nil"; }
 		}
 	};
 
@@ -437,4 +442,4 @@ var lib = (function () {
 		library[i] = serialize(library[i]);
 	}
 	return library;
-})();
+}))();

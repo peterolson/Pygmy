@@ -1,5 +1,6 @@
-var error = function (token, message) {
-    var min = Number.MAX_VALUE, max = Number.MIN_VALUE;
+var error = (token, message) => {
+    var min = Number.MAX_VALUE;
+    var max = Number.MIN_VALUE;
     (function traverse(token) {
         if (token.from && token.from < min) min = token.from;
         if (token.to && token.to > max) max = token.to;
@@ -10,7 +11,7 @@ var error = function (token, message) {
     throw [{
         from: min,
         to: max,
-        message: message,
+        message,
         type: "error"
     }];
 };

@@ -1,30 +1,29 @@
-(function () {
+((() => {
 	(function scoping() {
-		sc = {
+        sc = {
 		};
-		scS = [sc];
-		var cVar = function (v) {
-			return {
-				value: v,
-				mutability: 1,
-				enumerable: 1
-			};
-		};
+        scS = [sc];
+        var cVar = v => ({
+            value: v,
+            mutability: 1,
+            enumerable: 1
+        });
 
-		for (var fnc in lib) {
+        for (var fnc in lib) {
 			sc[fnc] = cVar(lib[fnc]);
 		}
 
-		var old, recursion = [];
+        var old;
+        var recursion = [];
 
-		y = function (type, stack, args, id, values, self) {
+        y = function (type, stack, args, id, values, self) {
 			if (type) {
 				old = scS.slice();
 				scS = stack;
 				var newScope = {};
 				if (type === 1) {
 					newScope.id = id;
-					newScope.arguments = cVar((values || []).map(function (v) { return v.value; }));
+					newScope.arguments = cVar((values || []).map(v => v.value));
 					newScope["this"] = cVar(self);
 					for (i = 0; i < args.length; i++) newScope[args[i]] = values[i];
 				}
@@ -50,7 +49,7 @@
 			}
 		};
 
-		n = function (name, scope) {
+        n = (name, scope) => {
 			var value;
 			if (scope.hasOwnProperty(name)) value = scope[name];
 			else {
@@ -67,16 +66,16 @@
 			throw "Unrecognized variable: " + name;
 		};
 
-		z = function (name, scope, value, settings, properties) {
-			var local = settings & 1,
-                enumerable = settings >> 1,
-                mutablility = settings >> 2;
-			value = {
-				value: value,
+        z = (name, scope, value, settings, properties) => {
+            var local = settings & 1;
+            var enumerable = settings >> 1;
+            var mutablility = settings >> 2;
+            value = {
+				value,
 				mutability: mutablility,
-				enumerable: enumerable
+				enumerable
 			};
-			if (properties) {
+            if (properties) {
 				var obj = n(name, scope);
 				if (obj instanceof Array) value = value.value;
 				if (!(properties instanceof Array)) properties = [properties];
@@ -99,38 +98,38 @@
 					}
 				}
 			}
-			return value.value;
-		};
+            return value.value;
+        };
 
-		f = function (fn, args) {
-			return fn(args.map(function (value) {
-				return {
-					value: value,
-					mutability: 1,
-					enumerable: 1
-				};
-			}), fn);
-		};
-	})();
+        f = (fn, args) => fn(args.map(value => ({
+            value,
+            mutability: 1,
+            enumerable: 1
+        })), fn);
+    })();
 
 	(function operators() {
-		var type = function (a) {
+        var type = a => {
 			var t = typeof a;
 			if (a === null || t === "undefined") return "_nil";
 			if (a instanceof Array) return "array";
 			return t;
-		}, match = function (args, types) {
+		};
+
+        var match = (args, types) => {
 			for (var i = 0; i < types.length; i++) {
 				if (!types[i]) continue;
 				if (type(args[i]) !== types[i]) return false;
 			}
 			return true;
-		}, typeError = function (operator, args) {
-			throw "Operator '" + operator + "' cannot handle arguments of type '" + args.map(function (arg) { return type(arg); }).join(" ") + "'";
 		};
 
-		(function concatenation() {
-			c = function (a, b) {
+        var typeError = (operator, args) => {
+			throw "Operator '" + operator + "' cannot handle arguments of type '" + args.map(arg => type(arg)).join(" ") + "'";
+		};
+
+        (function concatenation() {
+			c = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["string", "string"])) return a + b;
 				if (match(args, ["string", "number"])) return a + b;
@@ -147,45 +146,45 @@
 				typeError("&", args);
 			};
 		})();
-		(function arithmetic() {
-			a = function (a, b) {
+        (function arithmetic() {
+			a = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a + b;
-				if (match(args, ["array", "function"])) return function (args) { return b(a.concat(args), b); };
-				if (match(args, [0, "function"])) return function (args) { return b([].concat(a, args), b); };
+				if (match(args, ["array", "function"])) return args => b(a.concat(args), b);
+				if (match(args, [0, "function"])) return args => b([].concat(a, args), b);
 				typeError("+", args);
 			};
 
-			s = function (a, b) {
+			s = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a - b;
 				if (match(args, ["number"])) return -a;
 				typeError("-", args);
 			};
 
-			m = function (a, b) {
+			m = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a * b;
-				if (match(args, ["function", "function"])) return function (args) { return f(a, f(b, args)); ; };
+				if (match(args, ["function", "function"])) return args => { return f(a, f(b, args)); ; };
 				if (match(args, ["function", "array"])) return f(a, b);
 				typeError("*", args);
 			};
 
-			d = function (a, b) {
+			d = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a / b;
 				typeError("/", args);
 			};
 
-			r = function (a, b) {
+			r = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a % b;
 				typeError("/", args);
 			};
 
-			e = function (a, b) {
+			e = (a, b) => {
 				var args = [a, b];
-				if (match(args, ["number", "number"])) return Math.pow(a, b);
+				if (match(args, ["number", "number"])) return a ** b;
 				if (match(args, ["array", "function"])) {
 					var arr = [];
 					for (var i in a) {
@@ -203,9 +202,9 @@
 				typeError("^", args);
 			};
 		})();
-		(function comparison() {
+        (function comparison() {
 
-			q = function (a, b) {
+			q = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["array", "array"])) {
 					if (a.length !== b.length) return false;
@@ -217,32 +216,30 @@
 				return a === b;
 			};
 
-			nq = function (a, b) {
-				return !q(a, b);
-			};
+			nq = (a, b) => !q(a, b);
 
-			g = function (a, b) {
+			g = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a > b;
 				if (match(args, ["string", "string"])) return a > b;
 				typeError(">", args);
 			};
 
-			ge = function (a, b) {
+			ge = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a >= b;
 				if (match(args, ["string", "string"])) return a >= b;
 				typeError(">=", args);
 			};
 
-			l = function (a, b) {
+			l = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a < b;
 				if (match(args, ["string", "string"])) return a < b;
 				typeError("<", args);
 			};
 
-			le = function (a, b) {
+			le = (a, b) => {
 				var args = [a, b];
 				if (match(args, ["number", "number"])) return a <= b;
 				if (match(args, ["string", "string"])) return a <= b;
@@ -250,18 +247,18 @@
 			};
 
 		})();
-		(function logic() {
+        (function logic() {
 
-			b = function (a) {
+			b = a => {
 				if (typeof a !== "boolean") throw "Expected boolean but encountered " + typeof a;
 				return a;
 			};
 
 		})();
 
-		(function miscellaneous() {
+        (function miscellaneous() {
 
-			p = function (a, b) {
+			p = (a, b) => {
 				var tA = type(a);
 				if (b < 0 && (tA === "array" || tA === "string")) {
 					b = a.length + b;
@@ -282,16 +279,16 @@
 
 		})();
 
-		th = function (fn) {
+        th = fn => {
 			fn.thunk = true;
 			return fn;
 		};
 
-		X = function (x, th) {
+        X = (x, th) => {
 			if (!th && typeof x === "function" && x.thunk) {
 				return x();
 			}
 			return x;
 		};
-	})();
-})()
+    })();
+}))()
